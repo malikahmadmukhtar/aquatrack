@@ -21,11 +21,17 @@ async function getCurrentInventory(db) {
       caps: 0,
       shelling_1_5L_kg: 0,
       shelling_0_5L_kg: 0,
+      calcium_kg: 0,
+      magnesium_kg: 0,
+      sodium_kg: 0,
       bottles_1_5L_at_last_addition: 0,
       bottles_0_5L_at_last_addition: 0,
       caps_at_last_addition: 0,
       shelling_1_5L_kg_at_last_addition: 0,
       shelling_0_5L_kg_at_last_addition: 0,
+      calcium_kg_at_last_addition: 0,
+      magnesium_kg_at_last_addition: 0,
+      sodium_kg_at_last_addition: 0,
       last_inventory_addition_date: null,
       low_inventory_alert: false,
       alert_metrics: [],
@@ -44,6 +50,9 @@ function checkLowInventory(inventory) {
     { name: "caps", current: inventory.caps, baseline: inventory.caps_at_last_addition },
     { name: "shelling_1_5L_kg", current: inventory.shelling_1_5L_kg, baseline: inventory.shelling_1_5L_kg_at_last_addition },
     { name: "shelling_0_5L_kg", current: inventory.shelling_0_5L_kg, baseline: inventory.shelling_0_5L_kg_at_last_addition },
+    { name: "calcium_kg", current: inventory.calcium_kg, baseline: inventory.calcium_kg_at_last_addition },
+    { name: "magnesium_kg", current: inventory.magnesium_kg, baseline: inventory.magnesium_kg_at_last_addition },
+    { name: "sodium_kg", current: inventory.sodium_kg, baseline: inventory.sodium_kg_at_last_addition },
   ];
 
   const alertMetrics = [];
@@ -135,24 +144,54 @@ const handler = async (event) => {
       const shelling_used_1_5L_kg = Math.round((pets_produced_1_5L / 38) * 10000) / 10000;
       const shelling_used_0_5L_kg = Math.round((pets_produced_0_5L / 44) * 10000) / 10000;
 
+      // Extract minerals
+      const calcium_used = minerals_used ? (Number(minerals_used.calcium_kg) || 0) : 0;
+      const magnesium_used = minerals_used ? (Number(minerals_used.magnesium_kg) || 0) : 0;
+      const sodium_used = minerals_used ? (Number(minerals_used.sodium_kg) || 0) : 0;
+
       // 1. Get current inventory
       const inventory = await getCurrentInventory(db);
 
+      // Enforce stock availability validation
+      const insufficient = [];
+      if ((inventory.bottles_1_5L || 0) < bottles_used_1_5L) insufficient.push(`1.5L Bottles (Required: ${bottles_used_1_5L}, Available: ${inventory.bottles_1_5L || 0})`);
+      if ((inventory.bottles_0_5L || 0) < bottles_used_0_5L) insufficient.push(`0.5L Bottles (Required: ${bottles_used_0_5L}, Available: ${inventory.bottles_0_5L || 0})`);
+      if ((inventory.caps || 0) < caps_used) insufficient.push(`Caps (Required: ${caps_used}, Available: ${inventory.caps || 0})`);
+      if ((inventory.shelling_1_5L_kg || 0) < shelling_used_1_5L_kg) insufficient.push(`1.5L Shelling (Required: ${shelling_used_1_5L_kg} kg, Available: ${inventory.shelling_1_5L_kg || 0} kg)`);
+      if ((inventory.shelling_0_5L_kg || 0) < shelling_used_0_5L_kg) insufficient.push(`0.5L Shelling (Required: ${shelling_used_0_5L_kg} kg, Available: ${inventory.shelling_0_5L_kg || 0} kg)`);
+      if ((inventory.calcium_kg || 0) < calcium_used) insufficient.push(`Calcium (Required: ${calcium_used} kg, Available: ${inventory.calcium_kg || 0} kg)`);
+      if ((inventory.magnesium_kg || 0) < magnesium_used) insufficient.push(`Magnesium (Required: ${magnesium_used} kg, Available: ${inventory.magnesium_kg || 0} kg)`);
+      if ((inventory.sodium_kg || 0) < sodium_used) insufficient.push(`Sodium (Required: ${sodium_used} kg, Available: ${inventory.sodium_kg || 0} kg)`);
+
+      if (insufficient.length > 0) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: `Insufficient inventory for: ${insufficient.join(", ")}` }),
+        };
+      }
+
       // 2. Snapshot before
       const inventory_before = {
-        bottles_1_5L: inventory.bottles_1_5L,
-        bottles_0_5L: inventory.bottles_0_5L,
-        caps: inventory.caps,
-        shelling_1_5L_kg: inventory.shelling_1_5L_kg,
-        shelling_0_5L_kg: inventory.shelling_0_5L_kg,
+        bottles_1_5L: inventory.bottles_1_5L || 0,
+        bottles_0_5L: inventory.bottles_0_5L || 0,
+        caps: inventory.caps || 0,
+        shelling_1_5L_kg: inventory.shelling_1_5L_kg || 0,
+        shelling_0_5L_kg: inventory.shelling_0_5L_kg || 0,
+        calcium_kg: inventory.calcium_kg || 0,
+        magnesium_kg: inventory.magnesium_kg || 0,
+        sodium_kg: inventory.sodium_kg || 0,
       };
 
       // 3. Deduct materials (production-based)
-      inventory.bottles_1_5L -= bottles_used_1_5L;
-      inventory.bottles_0_5L -= bottles_used_0_5L;
-      inventory.caps -= caps_used;
-      inventory.shelling_1_5L_kg = Math.round((inventory.shelling_1_5L_kg - shelling_used_1_5L_kg) * 10000) / 10000;
-      inventory.shelling_0_5L_kg = Math.round((inventory.shelling_0_5L_kg - shelling_used_0_5L_kg) * 10000) / 10000;
+      inventory.bottles_1_5L = (inventory.bottles_1_5L || 0) - bottles_used_1_5L;
+      inventory.bottles_0_5L = (inventory.bottles_0_5L || 0) - bottles_used_0_5L;
+      inventory.caps = (inventory.caps || 0) - caps_used;
+      inventory.shelling_1_5L_kg = Math.round(((inventory.shelling_1_5L_kg || 0) - shelling_used_1_5L_kg) * 10000) / 10000;
+      inventory.shelling_0_5L_kg = Math.round(((inventory.shelling_0_5L_kg || 0) - shelling_used_0_5L_kg) * 10000) / 10000;
+      inventory.calcium_kg = Math.round(((inventory.calcium_kg || 0) - calcium_used) * 10000) / 10000;
+      inventory.magnesium_kg = Math.round(((inventory.magnesium_kg || 0) - magnesium_used) * 10000) / 10000;
+      inventory.sodium_kg = Math.round(((inventory.sodium_kg || 0) - sodium_used) * 10000) / 10000;
 
       // 4. Snapshot after
       const inventory_after = {
@@ -161,6 +200,9 @@ const handler = async (event) => {
         caps: inventory.caps,
         shelling_1_5L_kg: inventory.shelling_1_5L_kg,
         shelling_0_5L_kg: inventory.shelling_0_5L_kg,
+        calcium_kg: inventory.calcium_kg,
+        magnesium_kg: inventory.magnesium_kg,
+        sodium_kg: inventory.sodium_kg,
       };
 
       // 5. Check low inventory alerts (25% threshold)
@@ -181,13 +223,11 @@ const handler = async (event) => {
       const today = getTodayDate();
 
       // Normalize minerals_used
-      const normalizedMinerals = minerals_used
-        ? {
-            calcium_kg: minerals_used.calcium_kg || 0,
-            magnesium_kg: minerals_used.magnesium_kg || 0,
-            sodium_kg: minerals_used.sodium_kg || 0,
-          }
-        : null;
+      const normalizedMinerals = {
+        calcium_kg: calcium_used,
+        magnesium_kg: magnesium_used,
+        sodium_kg: sodium_used,
+      };
 
       const dailyLog = {
         date: today,
@@ -211,17 +251,12 @@ const handler = async (event) => {
       await db.collection("daily_logs").insertOne(dailyLog);
 
       // 8. Save mineral log if minerals_used has values
-      if (
-        normalizedMinerals &&
-        (normalizedMinerals.calcium_kg > 0 ||
-          normalizedMinerals.magnesium_kg > 0 ||
-          normalizedMinerals.sodium_kg > 0)
-      ) {
+      if (calcium_used > 0 || magnesium_used > 0 || sodium_used > 0) {
         await db.collection("mineral_logs").insertOne({
           date: today,
-          calcium_kg: normalizedMinerals.calcium_kg,
-          magnesium_kg: normalizedMinerals.magnesium_kg,
-          sodium_kg: normalizedMinerals.sodium_kg,
+          calcium_kg: calcium_used,
+          magnesium_kg: magnesium_used,
+          sodium_kg: sodium_used,
           created_at: now,
         });
       }

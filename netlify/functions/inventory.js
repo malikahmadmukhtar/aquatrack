@@ -14,11 +14,17 @@ const DEFAULT_INVENTORY = {
   caps: 0,
   shelling_1_5L_kg: 0,
   shelling_0_5L_kg: 0,
+  calcium_kg: 0,
+  magnesium_kg: 0,
+  sodium_kg: 0,
   bottles_1_5L_at_last_addition: 0,
   bottles_0_5L_at_last_addition: 0,
   caps_at_last_addition: 0,
   shelling_1_5L_kg_at_last_addition: 0,
   shelling_0_5L_kg_at_last_addition: 0,
+  calcium_kg_at_last_addition: 0,
+  magnesium_kg_at_last_addition: 0,
+  sodium_kg_at_last_addition: 0,
   last_inventory_addition_date: null,
   low_inventory_alert: false,
   alert_metrics: [],
@@ -77,10 +83,22 @@ const handler = async (event) => {
         caps = 0,
         shelling_1_5L_kg = 0,
         shelling_0_5L_kg = 0,
+        calcium_kg = 0,
+        magnesium_kg = 0,
+        sodium_kg = 0,
       } = body || {};
 
       // Validate all values are numbers
-      const additions = { bottles_1_5L, bottles_0_5L, caps, shelling_1_5L_kg, shelling_0_5L_kg };
+      const additions = {
+        bottles_1_5L,
+        bottles_0_5L,
+        caps,
+        shelling_1_5L_kg,
+        shelling_0_5L_kg,
+        calcium_kg,
+        magnesium_kg,
+        sodium_kg
+      };
       for (const [key, val] of Object.entries(additions)) {
         if (typeof val !== "number" || val < 0) {
           return {
@@ -96,19 +114,25 @@ const handler = async (event) => {
 
       // 2. Snapshot before
       const inventory_before = {
-        bottles_1_5L: current.bottles_1_5L,
-        bottles_0_5L: current.bottles_0_5L,
-        caps: current.caps,
-        shelling_1_5L_kg: current.shelling_1_5L_kg,
-        shelling_0_5L_kg: current.shelling_0_5L_kg,
+        bottles_1_5L: current.bottles_1_5L || 0,
+        bottles_0_5L: current.bottles_0_5L || 0,
+        caps: current.caps || 0,
+        shelling_1_5L_kg: current.shelling_1_5L_kg || 0,
+        shelling_0_5L_kg: current.shelling_0_5L_kg || 0,
+        calcium_kg: current.calcium_kg || 0,
+        magnesium_kg: current.magnesium_kg || 0,
+        sodium_kg: current.sodium_kg || 0,
       };
 
       // 3. Add quantities
-      const new_bottles_1_5L = current.bottles_1_5L + bottles_1_5L;
-      const new_bottles_0_5L = current.bottles_0_5L + bottles_0_5L;
-      const new_caps = current.caps + caps;
-      const new_shelling_1_5L_kg = Math.round((current.shelling_1_5L_kg + shelling_1_5L_kg) * 10000) / 10000;
-      const new_shelling_0_5L_kg = Math.round((current.shelling_0_5L_kg + shelling_0_5L_kg) * 10000) / 10000;
+      const new_bottles_1_5L = (current.bottles_1_5L || 0) + bottles_1_5L;
+      const new_bottles_0_5L = (current.bottles_0_5L || 0) + bottles_0_5L;
+      const new_caps = (current.caps || 0) + caps;
+      const new_shelling_1_5L_kg = Math.round(((current.shelling_1_5L_kg || 0) + shelling_1_5L_kg) * 10000) / 10000;
+      const new_shelling_0_5L_kg = Math.round(((current.shelling_0_5L_kg || 0) + shelling_0_5L_kg) * 10000) / 10000;
+      const new_calcium_kg = Math.round(((current.calcium_kg || 0) + calcium_kg) * 10000) / 10000;
+      const new_magnesium_kg = Math.round(((current.magnesium_kg || 0) + magnesium_kg) * 10000) / 10000;
+      const new_sodium_kg = Math.round(((current.sodium_kg || 0) + sodium_kg) * 10000) / 10000;
 
       const now = new Date().toISOString();
 
@@ -120,12 +144,18 @@ const handler = async (event) => {
         caps: new_caps,
         shelling_1_5L_kg: new_shelling_1_5L_kg,
         shelling_0_5L_kg: new_shelling_0_5L_kg,
+        calcium_kg: new_calcium_kg,
+        magnesium_kg: new_magnesium_kg,
+        sodium_kg: new_sodium_kg,
         // Reset baselines to new totals
         bottles_1_5L_at_last_addition: new_bottles_1_5L,
         bottles_0_5L_at_last_addition: new_bottles_0_5L,
         caps_at_last_addition: new_caps,
         shelling_1_5L_kg_at_last_addition: new_shelling_1_5L_kg,
         shelling_0_5L_kg_at_last_addition: new_shelling_0_5L_kg,
+        calcium_kg_at_last_addition: new_calcium_kg,
+        magnesium_kg_at_last_addition: new_magnesium_kg,
+        sodium_kg_at_last_addition: new_sodium_kg,
         last_inventory_addition_date: now,
         low_inventory_alert: false,
         alert_metrics: [],
@@ -145,6 +175,9 @@ const handler = async (event) => {
         caps: new_caps,
         shelling_1_5L_kg: new_shelling_1_5L_kg,
         shelling_0_5L_kg: new_shelling_0_5L_kg,
+        calcium_kg: new_calcium_kg,
+        magnesium_kg: new_magnesium_kg,
+        sodium_kg: new_sodium_kg,
       };
 
       // 8. Save inventory_additions record

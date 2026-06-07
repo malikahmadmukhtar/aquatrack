@@ -127,10 +127,16 @@ const API = (() => {
    * @param {number} limit
    * @param {number} offset
    */
-  async function getHistory(type, limit = 30, offset = 0) {
+  async function getHistory(type, limit = 30, offset = 0, startDate = null, endDate = null) {
     let query = `history?type=${type}`;
     if (type !== 'summary') {
       query += `&limit=${limit}&offset=${offset}`;
+    }
+    if (startDate) {
+      query += `&startDate=${startDate}`;
+    }
+    if (endDate) {
+      query += `&endDate=${endDate}`;
     }
     return request(query);
   }

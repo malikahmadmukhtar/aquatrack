@@ -1,6 +1,6 @@
 /**
  * AquaTrack — End of Day Update Page
- * Two glass cards: Add Inventory (left) + Log Production/Sales (right)
+ * Single focused card to log daily production & sales with live resource consumption preview.
  */
 
 const EODPage = (() => {
@@ -10,62 +10,24 @@ const EODPage = (() => {
     return `
       <div class="page-header fade-in">
         <h2 class="page-title">End of Day Update</h2>
-        <p class="page-subtitle">Add inventory stock and log today's production & sales</p>
+        <p class="page-subtitle">Log today's production & sales and record resource consumption</p>
       </div>
 
-      <div class="eod-grid fade-in-delay">
-        <!-- ====== Card A: Add Inventory ====== -->
-        <div class="glass-card card-hover">
-          <div class="card-header">
-            <div class="card-title-group">
-              <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-              <h3>Add Inventory</h3>
-            </div>
-          </div>
-
-          <!-- Current inventory summary -->
-          <div id="current-inventory-pills" class="inventory-pills">
-            <div class="pill-skeleton"></div>
-          </div>
-
-          <form id="inventory-form" class="form-stack">
-            <div class="form-row">
-              <div class="form-group">
-                <label for="inv-bottles-15">Bottles 1.5L</label>
-                <input type="number" id="inv-bottles-15" min="0" step="1" placeholder="0">
-              </div>
-              <div class="form-group">
-                <label for="inv-bottles-05">Bottles 0.5L</label>
-                <input type="number" id="inv-bottles-05" min="0" step="1" placeholder="0">
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="inv-caps">Caps</label>
-              <input type="number" id="inv-caps" min="0" step="1" placeholder="0">
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label for="inv-shelling-15">Shelling 1.5L (kg)</label>
-                <input type="number" id="inv-shelling-15" min="0" step="0.01" placeholder="0.00">
-              </div>
-              <div class="form-group">
-                <label for="inv-shelling-05">Shelling 0.5L (kg)</label>
-                <input type="number" id="inv-shelling-05" min="0" step="0.01" placeholder="0.00">
-              </div>
-            </div>
-            <button type="submit" class="btn btn-gradient" id="inv-submit-btn">
-              <span class="btn-text">Add to Inventory</span>
-              <span class="btn-loader hidden"></span>
-            </button>
-          </form>
-        </div>
-
-        <!-- ====== Card B: Log Production & Sales ====== -->
-        <div class="glass-card card-hover">
+      <div class="eod-single-layout fade-in-delay">
+        <!-- ====== Card: Log Production & Sales ====== -->
+        <div class="glass-card card-hover max-width-card">
           <div class="card-header">
             <div class="card-title-group">
               <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-              <h3>Log Production & Sales</h3>
+              <h3>Log Daily Production & Sales</h3>
+            </div>
+          </div>
+
+          <!-- Reference current stock levels -->
+          <div class="stock-reference-panel">
+            <div class="panel-label">Current Stock Baseline:</div>
+            <div id="current-inventory-pills" class="inventory-pills">
+              <div class="pill-skeleton"></div>
             </div>
           </div>
 
@@ -186,14 +148,17 @@ const EODPage = (() => {
       const data = await API.getInventory();
       const inv = data.inventory || data;
       pillsEl.innerHTML = `
-        <div class="pill">🧴 Bottles 1.5L: <strong>${Utils.formatNumber(inv.bottles_1_5L || 0)}</strong></div>
-        <div class="pill">🧴 Bottles 0.5L: <strong>${Utils.formatNumber(inv.bottles_0_5L || 0)}</strong></div>
+        <div class="pill">🧴 1.5L: <strong>${Utils.formatNumber(inv.bottles_1_5L || 0)}</strong></div>
+        <div class="pill">🧴 0.5L: <strong>${Utils.formatNumber(inv.bottles_0_5L || 0)}</strong></div>
         <div class="pill">🔵 Caps: <strong>${Utils.formatNumber(inv.caps || 0)}</strong></div>
         <div class="pill">📦 Shell 1.5L: <strong>${Utils.formatKg(inv.shelling_1_5L_kg || 0)}</strong></div>
         <div class="pill">📦 Shell 0.5L: <strong>${Utils.formatKg(inv.shelling_0_5L_kg || 0)}</strong></div>
+        <div class="pill">🧪 Ca: <strong>${Utils.formatKg(inv.calcium_kg || 0)}</strong></div>
+        <div class="pill">🧪 Mg: <strong>${Utils.formatKg(inv.magnesium_kg || 0)}</strong></div>
+        <div class="pill">🧪 Na: <strong>${Utils.formatKg(inv.sodium_kg || 0)}</strong></div>
       `;
     } catch (err) {
-      pillsEl.innerHTML = `<div class="pill pill-error">Could not load inventory</div>`;
+      pillsEl.innerHTML = `<div class="pill pill-error">Could not load current stock</div>`;
     }
   }
 
@@ -217,47 +182,6 @@ const EODPage = (() => {
     setVal('prev-shelling-15', Utils.formatKg(preview.shelling1_5_kg));
     setVal('prev-shelling-05', Utils.formatKg(preview.shelling0_5_kg));
     setVal('prev-total-bottles', Utils.formatNumber(preview.totalBottles));
-  }
-
-  /**
-   * Handle Inventory form submit.
-   */
-  async function handleInventorySubmit(e) {
-    e.preventDefault();
-    const btn = document.getElementById('inv-submit-btn');
-    const btnText = btn.querySelector('.btn-text');
-    const btnLoader = btn.querySelector('.btn-loader');
-
-    const data = {
-      bottles_1_5L: Number(document.getElementById('inv-bottles-15').value) || 0,
-      bottles_0_5L: Number(document.getElementById('inv-bottles-05').value) || 0,
-      caps: Number(document.getElementById('inv-caps').value) || 0,
-      shelling_1_5L_kg: Number(document.getElementById('inv-shelling-15').value) || 0,
-      shelling_0_5L_kg: Number(document.getElementById('inv-shelling-05').value) || 0
-    };
-
-    // Validate at least one field
-    if (Object.values(data).every(v => v === 0)) {
-      Utils.showToast('Please enter at least one inventory value.', 'warning');
-      return;
-    }
-
-    btn.disabled = true;
-    btnText.classList.add('hidden');
-    btnLoader.classList.remove('hidden');
-
-    try {
-      await API.addInventory(data);
-      Utils.showToast('Inventory added successfully!', 'success');
-      e.target.reset();
-      loadCurrentInventory();
-    } catch (err) {
-      Utils.showToast(err.message || 'Failed to add inventory.', 'error');
-    } finally {
-      btn.disabled = false;
-      btnText.classList.remove('hidden');
-      btnLoader.classList.add('hidden');
-    }
   }
 
   /**
@@ -293,11 +217,19 @@ const EODPage = (() => {
     btnLoader.classList.remove('hidden');
 
     try {
-      await API.logDaily(data);
+      const response = await API.logDaily(data);
       Utils.showToast('Daily log submitted successfully!', 'success');
       e.target.reset();
       updatePreview();
       loadCurrentInventory();
+      
+      // Update the low stock persistent alerts toast
+      if (response && response.inventory) {
+        Utils.updatePersistentAlert(response.inventory);
+      } else {
+        const todayData = await API.getToday();
+        Utils.updatePersistentAlert(todayData);
+      }
     } catch (err) {
       Utils.showToast(err.message || 'Failed to submit daily log.', 'error');
     } finally {
@@ -318,7 +250,6 @@ const EODPage = (() => {
     loadCurrentInventory();
 
     // Bind forms
-    document.getElementById('inventory-form')?.addEventListener('submit', handleInventorySubmit);
     document.getElementById('daily-log-form')?.addEventListener('submit', handleDailyLogSubmit);
 
     // Live preview listeners
@@ -346,3 +277,4 @@ const EODPage = (() => {
 
   return { mount, unmount };
 })();
+

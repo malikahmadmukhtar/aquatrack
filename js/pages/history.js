@@ -1,11 +1,14 @@
 /**
  * AquaTrack — History & Analytics Page
- * Summary cards, Chart.js charts, and paginated tables with tab switching.
+ * Summary cards, Chart.js charts, and paginated tables with tab switching and date range filtering.
  */
 
 const HistoryPage = (() => {
   let mounted = false;
   let charts = [];
+  let filterStartDate = null;
+  let filterEndDate = null;
+
   let tableState = {
     activeTab: 'daily',
     offsets: { daily: 0, additions: 0, minerals: 0 },
@@ -20,6 +23,24 @@ const HistoryPage = (() => {
       <div class="page-header fade-in">
         <h2 class="page-title">History & Analytics</h2>
         <p class="page-subtitle">Track trends, review past logs, and analyze production data</p>
+      </div>
+
+      <!-- Date Filter Panel -->
+      <div class="glass-card filter-card fade-in" style="margin-bottom: 24px; padding: 20px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;">
+          <div class="form-group" style="flex: 1; min-width: 150px;">
+            <label style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Start Date</label>
+            <input type="date" id="filter-start-date" style="margin-top: 6px; padding: 10px 14px; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); outline: none; width: 100%;">
+          </div>
+          <div class="form-group" style="flex: 1; min-width: 150px;">
+            <label style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">End Date</label>
+            <input type="date" id="filter-end-date" style="margin-top: 6px; padding: 10px 14px; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); outline: none; width: 100%;">
+          </div>
+          <div style="display: flex; gap: 10px; min-width: 200px;">
+            <button class="btn btn-gradient" id="apply-filter-btn" style="flex: 1; padding: 10px 16px; font-size: 0.85rem;">Filter</button>
+            <button class="btn btn-outline" id="clear-filter-btn" style="flex: 1; padding: 10px 16px; font-size: 0.85rem; border: 1px solid var(--border-subtle); background: transparent; color: var(--text-secondary);">Clear</button>
+          </div>
+        </div>
       </div>
 
       <!-- Summary Cards -->
@@ -105,18 +126,18 @@ const HistoryPage = (() => {
    */
   async function loadSummary() {
     try {
-      const data = await API.getHistory('summary');
+      const data = await API.getHistory('summary', 30, 0, filterStartDate, filterEndDate);
       const summary = data.summary || data;
 
       const totalProduced = (summary.total_pets_produced_1_5L || 0) + (summary.total_pets_produced_0_5L || 0);
       const totalSold = (summary.total_pets_sold_1_5L || 0) + (summary.total_pets_sold_0_5L || 0);
-      const totalBottles = (summary.total_bottles_used || 0);
+      const totalBottles = (summary.total_bottles_used_1_5L || 0) + (summary.total_bottles_used_0_5L || 0) || (summary.total_bottles_used || 0);
       const totalDays = (summary.total_days || 0);
 
-      Utils.animateCount(document.getElementById('sum-produced'), totalProduced, 1500);
-      Utils.animateCount(document.getElementById('sum-sold'), totalSold, 1500);
-      Utils.animateCount(document.getElementById('sum-bottles'), totalBottles, 1500);
-      Utils.animateCount(document.getElementById('sum-days'), totalDays, 1500);
+      Utils.animateCount(document.getElementById('sum-produced'), totalProduced, 1200);
+      Utils.animateCount(document.getElementById('sum-sold'), totalSold, 1200);
+      Utils.animateCount(document.getElementById('sum-bottles'), totalBottles, 1200);
+      Utils.animateCount(document.getElementById('sum-days'), totalDays, 1200);
     } catch (err) {
       console.error('Summary load error:', err);
     }
@@ -127,10 +148,33 @@ const HistoryPage = (() => {
    */
   async function loadCharts() {
     try {
-      const data = await API.getHistory('daily', 30, 0);
-      const logs = (data.logs || data.data || []).reverse();
+      // Clear existing charts first
+      charts.forEach(c => c.destroy());
+      charts = [];
 
-      if (logs.length === 0) return;
+      const data = await API.getHistory('daily', 30, 0, filterStartDate, filterEndDate);
+      const logs = (data.records || data.logs || data.data || []).slice().reverse();
+
+      if (logs.length === 0) {
+        // Render empty state on canvases if no data
+        const pCtx = document.getElementById('chart-production')?.getContext('2d');
+        const bCtx = document.getElementById('chart-bottles')?.getContext('2d');
+        if (pCtx) {
+          pCtx.clearRect(0, 0, pCtx.canvas.width, pCtx.canvas.height);
+          pCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+          pCtx.font = '14px Inter, sans-serif';
+          pCtx.textAlign = 'center';
+          pCtx.fillText('No data available for selected range', pCtx.canvas.width / 2, pCtx.canvas.height / 2);
+        }
+        if (bCtx) {
+          bCtx.clearRect(0, 0, bCtx.canvas.width, bCtx.canvas.height);
+          bCtx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+          bCtx.font = '14px Inter, sans-serif';
+          bCtx.textAlign = 'center';
+          bCtx.fillText('No data available for selected range', bCtx.canvas.width / 2, bCtx.canvas.height / 2);
+        }
+        return;
+      }
 
       const labels = logs.map(l => {
         const d = new Date(l.date || l.created_at);
@@ -329,19 +373,28 @@ const HistoryPage = (() => {
               <th>Caps</th>
               <th>Shelling 1.5L (kg)</th>
               <th>Shelling 0.5L (kg)</th>
+              <th>Calcium (kg)</th>
+              <th>Magnesium (kg)</th>
+              <th>Sodium (kg)</th>
             </tr>
           </thead>
           <tbody>
-            ${rows.map(r => `
-              <tr>
-                <td>${Utils.formatDate(r.date || r.created_at)}</td>
-                <td>${Utils.formatNumber(r.bottles_1_5L || 0)}</td>
-                <td>${Utils.formatNumber(r.bottles_0_5L || 0)}</td>
-                <td>${Utils.formatNumber(r.caps || 0)}</td>
-                <td>${Utils.formatKg(r.shelling_1_5L_kg || 0)}</td>
-                <td>${Utils.formatKg(r.shelling_0_5L_kg || 0)}</td>
-              </tr>
-            `).join('')}
+            ${rows.map(r => {
+              const added = r.added || {};
+              return `
+                <tr>
+                  <td>${Utils.formatDate(r.date || r.created_at)}</td>
+                  <td>${Utils.formatNumber(added.bottles_1_5L || r.bottles_1_5L || 0)}</td>
+                  <td>${Utils.formatNumber(added.bottles_0_5L || r.bottles_0_5L || 0)}</td>
+                  <td>${Utils.formatNumber(added.caps || r.caps || 0)}</td>
+                  <td>${Utils.formatKg(added.shelling_1_5L_kg || r.shelling_1_5L_kg || 0)}</td>
+                  <td>${Utils.formatKg(added.shelling_0_5L_kg || r.shelling_0_5L_kg || 0)}</td>
+                  <td>${Utils.formatKg(added.calcium_kg || r.calcium_kg || 0)}</td>
+                  <td>${Utils.formatKg(added.magnesium_kg || r.magnesium_kg || 0)}</td>
+                  <td>${Utils.formatKg(added.sodium_kg || r.sodium_kg || 0)}</td>
+                </tr>
+              `;
+            }).join('')}
           </tbody>
         </table>
       `;
@@ -391,8 +444,8 @@ const HistoryPage = (() => {
     }
 
     try {
-      const data = await API.getHistory(tab, LIMIT, tableState.offsets[tab]);
-      const rows = data.logs || data.data || data.additions || data.minerals || [];
+      const data = await API.getHistory(tab, LIMIT, tableState.offsets[tab], filterStartDate, filterEndDate);
+      const rows = data.records || data.logs || data.data || data.additions || data.minerals || [];
 
       if (rows.length < LIMIT) {
         tableState.hasMore[tab] = false;
@@ -440,7 +493,11 @@ const HistoryPage = (() => {
     container.innerHTML = getHTML();
     mounted = true;
 
-    // Reset state
+    // Reset date variables
+    filterStartDate = null;
+    filterEndDate = null;
+
+    // Reset table state
     tableState = {
       activeTab: 'daily',
       offsets: { daily: 0, additions: 0, minerals: 0 },
@@ -454,6 +511,32 @@ const HistoryPage = (() => {
     // Bind load more
     document.getElementById('load-more-btn')?.addEventListener('click', () => {
       loadTableData(true);
+    });
+
+    // Bind date filter actions
+    document.getElementById('apply-filter-btn')?.addEventListener('click', () => {
+      filterStartDate = document.getElementById('filter-start-date').value || null;
+      filterEndDate = document.getElementById('filter-end-date').value || null;
+      
+      // Reload everything
+      loadSummary();
+      loadCharts();
+      loadTableData(false);
+    });
+
+    document.getElementById('clear-filter-btn')?.addEventListener('click', () => {
+      const startEl = document.getElementById('filter-start-date');
+      const endEl = document.getElementById('filter-end-date');
+      if (startEl) startEl.value = '';
+      if (endEl) endEl.value = '';
+
+      filterStartDate = null;
+      filterEndDate = null;
+
+      // Reload everything
+      loadSummary();
+      loadCharts();
+      loadTableData(false);
     });
 
     // Load data

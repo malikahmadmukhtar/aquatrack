@@ -5,6 +5,7 @@
 
 const App = (() => {
   const pages = {
+    inventory: AddInventoryPage,
     eod: EODPage,
     today: TodayPage,
     history: HistoryPage
@@ -131,6 +132,7 @@ const App = (() => {
 
     // Bind logout
     document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+    document.getElementById('mobile-logout-btn')?.addEventListener('click', handleLogout);
 
     // Hash router
     window.addEventListener('hashchange', () => {

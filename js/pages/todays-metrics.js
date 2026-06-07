@@ -54,15 +54,15 @@ const TodayPage = (() => {
 
     // Inventory status
     const invItems = [
-      { label: 'Bottles 1.5L', current: inventory.bottles_1_5L || 0, icon: '🧴' },
-      { label: 'Bottles 0.5L', current: inventory.bottles_0_5L || 0, icon: '🧴' },
-      { label: 'Caps', current: inventory.caps || 0, icon: '🔵' },
-      { label: 'Shelling 1.5L', current: inventory.shelling_1_5L_kg || 0, icon: '📦', isKg: true },
-      { label: 'Shelling 0.5L', current: inventory.shelling_0_5L_kg || 0, icon: '📦', isKg: true }
+      { label: 'Bottles 1.5L', current: inventory.bottles_1_5L || 0, icon: '🧴', key: 'bottles_1_5L' },
+      { label: 'Bottles 0.5L', current: inventory.bottles_0_5L || 0, icon: '🧴', key: 'bottles_0_5L' },
+      { label: 'Caps', current: inventory.caps || 0, icon: '🔵', key: 'caps' },
+      { label: 'Shelling 1.5L', current: inventory.shelling_1_5L_kg || 0, icon: '📦', isKg: true, key: 'shelling_1_5L_kg' },
+      { label: 'Shelling 0.5L', current: inventory.shelling_0_5L_kg || 0, icon: '📦', isKg: true, key: 'shelling_0_5L_kg' },
+      { label: 'Calcium', current: inventory.calcium_kg || 0, icon: '🧪', isKg: true, key: 'calcium_kg' },
+      { label: 'Magnesium', current: inventory.magnesium_kg || 0, icon: '🧪', isKg: true, key: 'magnesium_kg' },
+      { label: 'Sodium', current: inventory.sodium_kg || 0, icon: '🧪', isKg: true, key: 'sodium_kg' }
     ];
-
-    // Calculate percentages based on last addition or total inventory
-    const lastAddition = data.last_addition || {};
 
     container.innerHTML = `
       <!-- Production Stats Row -->
@@ -148,8 +148,8 @@ const TodayPage = (() => {
       </div>
       <div class="glass-card inventory-status-card fade-in">
         ${invItems.map(item => {
-          // Use last_addition data or fallback to some reference
-          const lastAddVal = lastAddition[item.label.toLowerCase().replace(/ /g, '_')] || item.current * 1.5 || 100;
+          const baselineKey = `${item.key}_at_last_addition`;
+          const lastAddVal = inventory[baselineKey] || item.current || 100;
           const pct = lastAddVal > 0 ? Math.min((item.current / lastAddVal) * 100, 100) : 100;
           const statusClass = Utils.getStatusColor(pct);
           const displayValue = item.isKg ? Utils.formatKg(item.current) : Utils.formatNumber(item.current);
