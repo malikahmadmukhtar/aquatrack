@@ -1765,3 +1765,266 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     font-size: 0.8rem;
   }
 }
+
+/* ============================================
+   EDIT MODAL STYLING
+   ============================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 9, 20, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 1;
+  transition: opacity var(--transition-normal);
+  padding: 20px;
+}
+
+.modal-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+  display: none !important;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-bg);
+  border: var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: 28px !important;
+  box-shadow: var(--shadow-lg), 0 0 30px rgba(0, 212, 255, 0.05);
+  animation: modalEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes modalEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  flex-shrink: 0;
+}
+
+.modal-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--cyan), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.75rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color var(--transition-fast);
+  padding: 4px;
+}
+
+.modal-close-btn:hover {
+  color: var(--rose);
+}
+
+.modal-body {
+  overflow-y: auto;
+  flex: 1;
+  padding-right: 4px;
+}
+
+.modal-body .form-section-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--cyan);
+  margin-top: 14px;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================
+   INVENTORY ADJUSTMENT MODE TOGGLE
+   ============================================ */
+.mode-toggle-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-bottom: 24px;
+}
+
+.mode-toggle-container span {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.toggle-buttons {
+  display: flex;
+  gap: 4px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.toggle-btn:hover {
+  color: var(--text-primary);
+}
+
+.toggle-btn.active {
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.08);
+  border: 1px solid rgba(0, 212, 255, 0.15);
+}
+
+/* ============================================
+   ACTION BUTTONS IN TABLES & CARDS
+   ============================================ */
+.table-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.btn-icon {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  font-size: 0.9rem;
+  padding: 0;
+}
+
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-light);
+  transform: translateY(-1px);
+}
+
+.btn-edit:hover {
+  color: var(--cyan);
+  border-color: rgba(0, 212, 255, 0.25);
+  background: var(--cyan-dim);
+}
+
+.btn-delete:hover {
+  color: var(--rose);
+  border-color: rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.card-mobile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-mobile-actions {
+  display: flex;
+  gap: 6px;
+}
+
+/* ============================================
+   PREVENT ZOOMING & OVERFLOW CONTROLS
+   ============================================ */
+/* Prevent input auto-zoom on iOS */
+.form-group input[type="number"],
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="date"],
+.form-group select {
+  font-size: 16px !important; /* Forces iOS not to zoom in on focus */
+}
+
+/* Prevent outer layout overflow from wide components */
+.main-content {
+  min-width: 0;
+}
+
+.page-container {
+  width: 100%;
+}
+
+.glass-card,
+.chart-card,
+.table-card {
+  max-width: 100%;
+  min-width: 0; /* Let grid components shrink */
+}
+
+/* ============================================
+   RESPONSIVE OVERRIDES
+   ============================================ */
+@media (max-width: 480px) {
+  .login-screen {
+    overflow-y: auto;
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .login-card {
+    padding: 32px 20px;
+    margin: auto 0;
+    max-width: 100%;
+  }
+
+  .login-logo {
+    margin-bottom: 24px;
+  }
+
+  .logo-icon {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+  }
+
+  .logo-text {
+    font-size: 1.75rem;
+  }
+}
+

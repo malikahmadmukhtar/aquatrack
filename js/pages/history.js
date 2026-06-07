@@ -8,6 +8,7 @@ const HistoryPage = (() => {
   let charts = [];
   let filterStartDate = null;
   let filterEndDate = null;
+  let escHandler = null;
 
   let tableState = {
     activeTab: 'daily',
@@ -342,6 +343,7 @@ const HistoryPage = (() => {
               <th>Bottles Used</th>
               <th>Caps Used</th>
               <th>Shelling (kg)</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -357,6 +359,12 @@ const HistoryPage = (() => {
                   <td>${Utils.formatNumber(preview.totalBottles)}</td>
                   <td>${Utils.formatNumber(preview.totalCaps)}</td>
                   <td>${Utils.formatKg(preview.totalShelling)}</td>
+                  <td>
+                    <div class="table-actions">
+                      <button class="btn-icon btn-edit" data-id="${r._id || r.id}" data-type="daily" title="Edit">✏️</button>
+                      <button class="btn-icon btn-delete" data-id="${r._id || r.id}" data-type="daily" title="Delete">🗑️</button>
+                    </div>
+                  </td>
                 </tr>
               `;
             }).join('')}
@@ -371,6 +379,10 @@ const HistoryPage = (() => {
               <div class="history-mobile-card">
                 <div class="card-mobile-header">
                   <span class="card-mobile-date">📅 ${Utils.formatDate(r.date || r.created_at)}</span>
+                  <div class="card-mobile-actions">
+                    <button class="btn-icon btn-edit" data-id="${r._id || r.id}" data-type="daily" title="Edit">✏️</button>
+                    <button class="btn-icon btn-delete" data-id="${r._id || r.id}" data-type="daily" title="Delete">🗑️</button>
+                  </div>
                 </div>
                 <div class="card-mobile-grid">
                   <div class="card-mobile-item">
@@ -418,6 +430,7 @@ const HistoryPage = (() => {
               <th>Calcium (kg)</th>
               <th>Magnesium (kg)</th>
               <th>Sodium (kg)</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -434,6 +447,16 @@ const HistoryPage = (() => {
                   <td>${Utils.formatKg(added.calcium_kg || r.calcium_kg || 0)}</td>
                   <td>${Utils.formatKg(added.magnesium_kg || r.magnesium_kg || 0)}</td>
                   <td>${Utils.formatKg(added.sodium_kg || r.sodium_kg || 0)}</td>
+                  <td>
+                    ${r.is_overwrite ? `
+                      <span class="badge badge-accent">Reset</span>
+                    ` : `
+                      <div class="table-actions">
+                        <button class="btn-icon btn-edit" data-id="${r._id || r.id}" data-type="additions" title="Edit">✏️</button>
+                        <button class="btn-icon btn-delete" data-id="${r._id || r.id}" data-type="additions" title="Delete">🗑️</button>
+                      </div>
+                    `}
+                  </td>
                 </tr>
               `;
             }).join('')}
@@ -448,6 +471,14 @@ const HistoryPage = (() => {
               <div class="history-mobile-card">
                 <div class="card-mobile-header">
                   <span class="card-mobile-date">📦 ${Utils.formatDate(r.date || r.created_at)}</span>
+                  <div class="card-mobile-actions">
+                    ${r.is_overwrite ? `
+                      <span class="badge badge-accent">Reset</span>
+                    ` : `
+                      <button class="btn-icon btn-edit" data-id="${r._id || r.id}" data-type="additions" title="Edit">✏️</button>
+                      <button class="btn-icon btn-delete" data-id="${r._id || r.id}" data-type="additions" title="Delete">🗑️</button>
+                    `}
+                  </div>
                 </div>
                 <div class="card-mobile-grid">
                   <div class="card-mobile-item">
@@ -498,6 +529,7 @@ const HistoryPage = (() => {
               <th>Calcium (kg)</th>
               <th>Magnesium (kg)</th>
               <th>Sodium (kg)</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -509,6 +541,12 @@ const HistoryPage = (() => {
                   <td>${Utils.formatKg(m.calcium_kg || 0)}</td>
                   <td>${Utils.formatKg(m.magnesium_kg || 0)}</td>
                   <td>${Utils.formatKg(m.sodium_kg || 0)}</td>
+                  <td>
+                    <div class="table-actions">
+                      <button class="btn-icon btn-edit" data-id="${r._id || r.id}" data-type="minerals" title="Edit">✏️</button>
+                      <button class="btn-icon btn-delete" data-id="${r._id || r.id}" data-type="minerals" title="Delete">🗑️</button>
+                    </div>
+                  </td>
                 </tr>
               `;
             }).join('')}
@@ -523,6 +561,10 @@ const HistoryPage = (() => {
               <div class="history-mobile-card">
                 <div class="card-mobile-header">
                   <span class="card-mobile-date">🧪 ${Utils.formatDate(r.date || r.created_at)}</span>
+                  <div class="card-mobile-actions">
+                    <button class="btn-icon btn-edit" data-id="${r._id || r.id}" data-type="minerals" title="Edit">✏️</button>
+                    <button class="btn-icon btn-delete" data-id="${r._id || r.id}" data-type="minerals" title="Delete">🗑️</button>
+                  </div>
                 </div>
                 <div class="card-mobile-grid">
                   <div class="card-mobile-item">
@@ -550,6 +592,292 @@ const HistoryPage = (() => {
     if (loadMoreBtn) {
       loadMoreBtn.style.display = tableState.hasMore[tab] ? 'inline-flex' : 'none';
     }
+  }
+
+  /**
+   * Handle Edit/Delete clicks via delegation on table content container.
+   */
+  function handleTableActionClick(e) {
+    const btn = e.target.closest('.btn-icon');
+    if (!btn) return;
+
+    const id = btn.dataset.id;
+    const type = btn.dataset.type;
+    const isDelete = btn.classList.contains('btn-delete');
+    const isEdit = btn.classList.contains('btn-edit');
+
+    if (isDelete) {
+      handleDelete(id, type);
+    } else if (isEdit) {
+      handleEdit(id, type);
+    }
+  }
+
+  /**
+   * Delete daily log or stock addition.
+   */
+  async function handleDelete(id, type) {
+    const targetType = (type === 'minerals') ? 'daily' : type;
+    const typeLabel = (targetType === 'daily') ? 'Daily Log' : 'Inventory Addition';
+
+    const confirmed = confirm(`Are you sure you want to delete this ${typeLabel}? This action will adjust inventory baseline levels and cannot be undone.`);
+    if (!confirmed) return;
+
+    try {
+      let response;
+      if (targetType === 'daily') {
+        response = await API.deleteDailyLog(id);
+      } else {
+        response = await API.deleteAddition(id);
+      }
+
+      Utils.showToast(`${typeLabel} deleted successfully!`, 'success');
+
+      // Update persistent alert in header
+      if (response && response.inventory) {
+        Utils.updatePersistentAlert(response.inventory);
+      } else {
+        const todayData = await API.getToday();
+        Utils.updatePersistentAlert(todayData);
+      }
+
+      // Reload all history sections
+      loadSummary();
+      loadCharts();
+      loadTableData(false);
+    } catch (err) {
+      Utils.showToast(err.message || `Failed to delete ${typeLabel}.`, 'error');
+    }
+  }
+
+  /**
+   * Edit daily log or stock addition details.
+   */
+  function handleEdit(id, type) {
+    const targetType = (type === 'minerals') ? 'daily' : type;
+    const tab = tableState.activeTab;
+    
+    // Find the record in local state
+    const record = tableState.data[tab].find(r => (r._id || r.id) === id);
+    if (!record) {
+      Utils.showToast('Could not find record details.', 'error');
+      return;
+    }
+
+    const modal = document.getElementById('edit-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const fieldsContainer = document.getElementById('modal-form-fields');
+    const editForm = document.getElementById('modal-edit-form');
+
+    if (!modal || !fieldsContainer || !editForm) return;
+
+    // Clear previous form fields and handlers
+    fieldsContainer.innerHTML = '';
+    
+    // Clone form to clear any previous submit event listeners
+    const newForm = editForm.cloneNode(true);
+    editForm.parentNode.replaceChild(newForm, editForm);
+
+    if (targetType === 'daily') {
+      modalTitle.textContent = `Edit Daily Log — ${Utils.formatDate(record.date || record.created_at)}`;
+      
+      const minerals = record.minerals_used || {};
+      newForm.querySelector('#modal-form-fields').innerHTML = `
+        <div class="form-section">
+          <div class="form-section-title">Production Metrics</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-prod-15">Produced 1.5L</label>
+              <input type="number" id="edit-prod-15" min="0" step="1" value="${record.pets_produced_1_5L || 0}" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-prod-05">Produced 0.5L</label>
+              <input type="number" id="edit-prod-05" min="0" step="1" value="${record.pets_produced_0_5L || 0}" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-sold-15">Sold 1.5L</label>
+              <input type="number" id="edit-sold-15" min="0" step="1" value="${record.pets_sold_1_5L || 0}" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-sold-05">Sold 0.5L</label>
+              <input type="number" id="edit-sold-05" min="0" step="1" value="${record.pets_sold_0_5L || 0}" required>
+            </div>
+          </div>
+        </div>
+        <div class="form-divider"></div>
+        <div class="form-section">
+          <div class="form-section-title">Minerals Used</div>
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label for="edit-calcium">Calcium (kg)</label>
+              <input type="number" id="edit-calcium" min="0" step="0.0001" value="${minerals.calcium_kg || 0}" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-magnesium">Magnesium (kg)</label>
+              <input type="number" id="edit-magnesium" min="0" step="0.0001" value="${minerals.magnesium_kg || 0}" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-sodium">Sodium (kg)</label>
+              <input type="number" id="edit-sodium" min="0" step="0.0001" value="${minerals.sodium_kg || 0}" required>
+            </div>
+          </div>
+        </div>
+      `;
+
+      newForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const btn = newForm.querySelector('#modal-submit-btn');
+        const btnText = btn.querySelector('.btn-text');
+        const btnLoader = btn.querySelector('.btn-loader');
+
+        btn.disabled = true;
+        btnText.classList.add('hidden');
+        btnLoader.classList.remove('hidden');
+
+        const data = {
+          pets_produced_1_5L: Number(document.getElementById('edit-prod-15').value) || 0,
+          pets_produced_0_5L: Number(document.getElementById('edit-prod-05').value) || 0,
+          pets_sold_1_5L: Number(document.getElementById('edit-sold-15').value) || 0,
+          pets_sold_0_5L: Number(document.getElementById('edit-sold-05').value) || 0,
+          minerals_used: {
+            calcium_kg: Number(document.getElementById('edit-calcium').value) || 0,
+            magnesium_kg: Number(document.getElementById('edit-magnesium').value) || 0,
+            sodium_kg: Number(document.getElementById('edit-sodium').value) || 0
+          }
+        };
+
+        try {
+          const response = await API.updateDailyLog(id, data);
+          Utils.showToast('Daily log updated successfully!', 'success');
+          
+          if (response && response.inventory) {
+            Utils.updatePersistentAlert(response.inventory);
+          } else {
+            const todayData = await API.getToday();
+            Utils.updatePersistentAlert(todayData);
+          }
+
+          modal.classList.add('hidden');
+          
+          // Reload everything
+          loadSummary();
+          loadCharts();
+          loadTableData(false);
+        } catch (err) {
+          Utils.showToast(err.message || 'Failed to update daily log.', 'error');
+        } finally {
+          btn.disabled = false;
+          btnText.classList.remove('hidden');
+          btnLoader.classList.add('hidden');
+        }
+      });
+
+    } else if (targetType === 'additions') {
+      modalTitle.textContent = `Edit Inventory Addition — ${Utils.formatDate(record.date || record.created_at)}`;
+      const added = record.added || {};
+
+      newForm.querySelector('#modal-form-fields').innerHTML = `
+        <div class="form-section">
+          <div class="form-section-title">Packaging Stock Added</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-bottles-15">Bottles 1.5L</label>
+              <input type="number" id="edit-bottles-15" min="0" step="1" value="${added.bottles_1_5L || record.bottles_1_5L || 0}" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-bottles-05">Bottles 0.5L</label>
+              <input type="number" id="edit-bottles-05" min="0" step="1" value="${added.bottles_0_5L || record.bottles_0_5L || 0}" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="edit-caps">Caps</label>
+            <input type="number" id="edit-caps" min="0" step="1" value="${added.caps || record.caps || 0}" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-shelling-15">Shelling 1.5L (kg)</label>
+              <input type="number" id="edit-shelling-15" min="0" step="0.01" value="${added.shelling_1_5L_kg || record.shelling_1_5L_kg || 0}" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-shelling-05">Shelling 0.5L (kg)</label>
+              <input type="number" id="edit-shelling-05" min="0" step="0.01" value="${added.shelling_0_5L_kg || record.shelling_0_5L_kg || 0}" required>
+            </div>
+          </div>
+        </div>
+        <div class="form-divider"></div>
+        <div class="form-section">
+          <div class="form-section-title">Mineral Stock Added</div>
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label for="edit-calcium">Calcium (kg)</label>
+              <input type="number" id="edit-calcium" min="0" step="0.01" value="${added.calcium_kg || record.calcium_kg || 0}" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-magnesium">Magnesium (kg)</label>
+              <input type="number" id="edit-magnesium" min="0" step="0.01" value="${added.magnesium_kg || record.magnesium_kg || 0}" required>
+            </div>
+            <div class="form-group">
+              <label for="edit-sodium">Sodium (kg)</label>
+              <input type="number" id="edit-sodium" min="0" step="0.01" value="${added.sodium_kg || record.sodium_kg || 0}" required>
+            </div>
+          </div>
+        </div>
+      `;
+
+      newForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const btn = newForm.querySelector('#modal-submit-btn');
+        const btnText = btn.querySelector('.btn-text');
+        const btnLoader = btn.querySelector('.btn-loader');
+
+        btn.disabled = true;
+        btnText.classList.add('hidden');
+        btnLoader.classList.remove('hidden');
+
+        const data = {
+          bottles_1_5L: Number(document.getElementById('edit-bottles-15').value) || 0,
+          bottles_0_5L: Number(document.getElementById('edit-bottles-05').value) || 0,
+          caps: Number(document.getElementById('edit-caps').value) || 0,
+          shelling_1_5L_kg: Number(document.getElementById('edit-shelling-15').value) || 0,
+          shelling_0_5L_kg: Number(document.getElementById('edit-shelling-05').value) || 0,
+          calcium_kg: Number(document.getElementById('edit-calcium').value) || 0,
+          magnesium_kg: Number(document.getElementById('edit-magnesium').value) || 0,
+          sodium_kg: Number(document.getElementById('edit-sodium').value) || 0
+        };
+
+        try {
+          const response = await API.updateAddition(id, data);
+          Utils.showToast('Inventory addition updated successfully!', 'success');
+          
+          if (response && response.inventory) {
+            Utils.updatePersistentAlert(response.inventory);
+          } else {
+            const todayData = await API.getToday();
+            Utils.updatePersistentAlert(todayData);
+          }
+
+          modal.classList.add('hidden');
+          
+          // Reload everything
+          loadSummary();
+          loadCharts();
+          loadTableData(false);
+        } catch (err) {
+          Utils.showToast(err.message || 'Failed to update inventory addition.', 'error');
+        } finally {
+          btn.disabled = false;
+          btnText.classList.remove('hidden');
+          btnLoader.classList.add('hidden');
+        }
+      });
+    }
+
+    // Show modal
+    modal.classList.remove('hidden');
   }
 
   /**
@@ -658,6 +986,30 @@ const HistoryPage = (() => {
       loadTableData(false);
     });
 
+    // Bind table action clicks (Edit / Delete)
+    document.getElementById('table-content')?.addEventListener('click', handleTableActionClick);
+
+    // Bind edit modal close listeners
+    const modal = document.getElementById('edit-modal');
+    modal?.querySelector('#modal-close-btn')?.addEventListener('click', () => {
+      modal.classList.add('hidden');
+    });
+    if (modal) {
+      modal.onclick = (e) => {
+        if (e.target === modal) {
+          modal.classList.add('hidden');
+        }
+      };
+    }
+
+    // Keyboard Esc handler to close modal
+    escHandler = (e) => {
+      if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+      }
+    };
+    window.addEventListener('keydown', escHandler);
+
     // Load data
     loadSummary();
     loadCharts();
@@ -671,6 +1023,12 @@ const HistoryPage = (() => {
     mounted = false;
     charts.forEach(c => c.destroy());
     charts = [];
+
+    // Clean up Escape key listener
+    if (escHandler) {
+      window.removeEventListener('keydown', escHandler);
+      escHandler = null;
+    }
   }
 
   return { mount, unmount };

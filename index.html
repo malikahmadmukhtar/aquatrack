@@ -21,7 +21,7 @@
         <h1 class="logo-text">AquaTrack</h1>
         <p class="login-subtitle">Inventory Management System</p>
       </div>
-      <form id="login-form" autocomplete="off">
+      <form id="login-form" class="form-stack" autocomplete="off">
         <div class="form-group">
           <label for="login-username">Username</label>
           <input type="text" id="login-username" placeholder="Enter your username" required>
@@ -104,6 +104,25 @@
       <div class="alert-content">
         <strong>Low Inventory Alert</strong>
         <p id="alert-metrics-list"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== EDIT MODAL ========== -->
+  <div id="edit-modal" class="modal-overlay hidden">
+    <div class="modal-card glass-card">
+      <div class="modal-header">
+        <h3 id="modal-title">Edit Entry</h3>
+        <button class="modal-close-btn" id="modal-close-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="modal-edit-form" class="form-stack">
+          <div id="modal-form-fields"></div>
+          <button type="submit" class="btn btn-gradient btn-full" id="modal-submit-btn">
+            <span class="btn-text">Save Changes</span>
+            <span class="btn-loader hidden"></span>
+          </button>
+        </form>
       </div>
     </div>
   </div>

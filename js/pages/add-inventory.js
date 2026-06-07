@@ -1,16 +1,17 @@
 /**
  * AquaTrack — Add Inventory Page
- * Module to handle adding new stock into baseline inventory.
+ * Module to handle adding new stock into baseline inventory or overriding baseline values directly.
  */
 
 const AddInventoryPage = (() => {
   let mounted = false;
+  let isOverwriteMode = false;
 
   function getHTML() {
     return `
       <div class="page-header fade-in">
         <h2 class="page-title">Add Inventory</h2>
-        <p class="page-subtitle">Add new stock to your baseline inventory metrics</p>
+        <p class="page-subtitle">Add new stock or correct baseline inventory metrics</p>
       </div>
 
       <div class="inventory-grid fade-in-delay">
@@ -18,7 +19,16 @@ const AddInventoryPage = (() => {
           <div class="card-header">
             <div class="card-title-group">
               <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-              <h3>Add New Stock</h3>
+              <h3 id="form-card-title">Add New Stock</h3>
+            </div>
+          </div>
+
+          <!-- Mode Selector Toggle -->
+          <div class="mode-toggle-container">
+            <span>Adjustment Mode</span>
+            <div class="toggle-buttons">
+              <button type="button" class="toggle-btn active" id="mode-add-btn">📦 Add Stock</button>
+              <button type="button" class="toggle-btn" id="mode-overwrite-btn">🔧 Direct Correct</button>
             </div>
           </div>
 
@@ -85,7 +95,7 @@ const AddInventoryPage = (() => {
             </div>
 
             <button type="submit" class="btn btn-gradient" id="inv-submit-btn">
-              <span class="btn-text">Add to Inventory</span>
+              <span class="btn-text" id="submit-btn-text">Add to Inventory</span>
               <span class="btn-loader hidden"></span>
             </button>
           </form>
@@ -139,8 +149,8 @@ const AddInventoryPage = (() => {
       sodium_kg: Number(document.getElementById('inv-sodium').value) || 0
     };
 
-    // Validate at least one field
-    if (Object.values(data).every(v => v === 0)) {
+    // Validate at least one field unless in overwrite mode
+    if (!isOverwriteMode && Object.values(data).every(v => v === 0)) {
       Utils.showToast('Please enter at least one inventory value.', 'warning');
       return;
     }
@@ -150,12 +160,19 @@ const AddInventoryPage = (() => {
     btnLoader.classList.remove('hidden');
 
     try {
-      const response = await API.addInventory(data);
-      Utils.showToast('Inventory added successfully!', 'success');
+      let response;
+      if (isOverwriteMode) {
+        response = await API.overwriteInventory(data);
+        Utils.showToast('Inventory baseline adjusted successfully!', 'success');
+      } else {
+        response = await API.addInventory(data);
+        Utils.showToast('Inventory added successfully!', 'success');
+      }
+      
       e.target.reset();
       loadCurrentInventory();
       
-      // Update persistent low inventory alerts
+      // Update alerts
       if (response && response.inventory) {
         Utils.updatePersistentAlert(response.inventory);
       } else {
@@ -163,7 +180,7 @@ const AddInventoryPage = (() => {
         Utils.updatePersistentAlert(todayData);
       }
     } catch (err) {
-      Utils.showToast(err.message || 'Failed to add inventory.', 'error');
+      Utils.showToast(err.message || 'Failed to update inventory.', 'error');
     } finally {
       btn.disabled = false;
       btnText.classList.remove('hidden');
@@ -175,10 +192,33 @@ const AddInventoryPage = (() => {
    * Mount the page.
    */
   function mount(container) {
+    isOverwriteMode = false;
     container.innerHTML = getHTML();
     mounted = true;
 
     loadCurrentInventory();
+
+    // Bind mode toggle buttons
+    const addBtn = document.getElementById('mode-add-btn');
+    const overwriteBtn = document.getElementById('mode-overwrite-btn');
+    const formTitle = document.getElementById('form-card-title');
+    const submitText = document.getElementById('submit-btn-text');
+
+    addBtn?.addEventListener('click', () => {
+      isOverwriteMode = false;
+      addBtn.classList.add('active');
+      overwriteBtn.classList.remove('active');
+      if (formTitle) formTitle.textContent = "Add New Stock";
+      if (submitText) submitText.textContent = "Add to Inventory";
+    });
+
+    overwriteBtn?.addEventListener('click', () => {
+      isOverwriteMode = true;
+      overwriteBtn.classList.add('active');
+      addBtn.classList.remove('active');
+      if (formTitle) formTitle.textContent = "Direct Baseline Correction";
+      if (submitText) submitText.textContent = "Overwrite Baseline Stock";
+    });
 
     document.getElementById('inventory-form')?.addEventListener('submit', handleInventorySubmit);
   }

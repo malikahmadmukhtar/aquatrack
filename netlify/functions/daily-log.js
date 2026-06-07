@@ -1,10 +1,11 @@
 const { getDb } = require("./db");
 const { verifyToken } = require("./auth");
+const { ObjectId } = require("mongodb");
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type,Authorization",
-  "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
 };
 
 function getTodayDate() {
@@ -57,7 +58,6 @@ function checkLowInventory(inventory) {
 
   const alertMetrics = [];
   for (const m of metrics) {
-    // Only check if baseline > 0 to avoid false alerts on zero-baseline items
     if (m.baseline > 0 && m.current <= m.baseline * 0.25) {
       alertMetrics.push(m.name);
     }
@@ -83,6 +83,8 @@ const handler = async (event) => {
   }
 
   const db = await getDb();
+  const params = event.queryStringParameters || {};
+  const logId = params.id || null;
 
   try {
     // ─── GET: Return today's log ───
@@ -101,6 +103,223 @@ const handler = async (event) => {
           low_inventory_alert: inventory.low_inventory_alert || false,
           alert_metrics: inventory.alert_metrics || [],
         }),
+      };
+    }
+
+    // ─── DELETE: Delete a daily log entry ───
+    if (event.httpMethod === "DELETE") {
+      if (!logId) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "Log id query parameter is required" }),
+        };
+      }
+
+      const log = await db.collection("daily_logs").findOne({ _id: new ObjectId(logId) });
+      if (!log) {
+        return {
+          statusCode: 404,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "Daily log record not found" }),
+        };
+      }
+
+      const inventory = await getCurrentInventory(db);
+
+      // Refund resource usage back to baseline inventory
+      const refunded_bottles_1_5L = (inventory.bottles_1_5L || 0) + (log.bottles_used_1_5L || 0);
+      const refunded_bottles_0_5L = (inventory.bottles_0_5L || 0) + (log.bottles_used_0_5L || 0);
+      const refunded_caps = (inventory.caps || 0) + (log.caps_used || 0);
+      const refunded_shelling_1_5L_kg = Math.round(((inventory.shelling_1_5L_kg || 0) + (log.shelling_used_1_5L_kg || 0)) * 10000) / 10000;
+      const refunded_shelling_0_5L_kg = Math.round(((inventory.shelling_0_5L_kg || 0) + (log.shelling_used_0_5L_kg || 0)) * 10000) / 10000;
+
+      const minerals = log.minerals_used || {};
+      const refunded_calcium_kg = Math.round(((inventory.calcium_kg || 0) + (minerals.calcium_kg || 0)) * 10000) / 10000;
+      const refunded_magnesium_kg = Math.round(((inventory.magnesium_kg || 0) + (minerals.magnesium_kg || 0)) * 10000) / 10000;
+      const refunded_sodium_kg = Math.round(((inventory.sodium_kg || 0) + (minerals.sodium_kg || 0)) * 10000) / 10000;
+
+      const updatedInventory = {
+        ...inventory,
+        bottles_1_5L: refunded_bottles_1_5L,
+        bottles_0_5L: refunded_bottles_0_5L,
+        caps: refunded_caps,
+        shelling_1_5L_kg: refunded_shelling_1_5L_kg,
+        shelling_0_5L_kg: refunded_shelling_0_5L_kg,
+        calcium_kg: refunded_calcium_kg,
+        magnesium_kg: refunded_magnesium_kg,
+        sodium_kg: refunded_sodium_kg,
+        updated_at: new Date().toISOString()
+      };
+
+      // Check low inventory baseline status (might be cleared by refund)
+      const alertMetrics = checkLowInventory(updatedInventory);
+      updatedInventory.low_inventory_alert = alertMetrics.length > 0;
+      updatedInventory.alert_metrics = alertMetrics;
+
+      await db.collection("inventory").replaceOne({ _id: "current" }, updatedInventory, { upsert: true });
+      await db.collection("daily_logs").deleteOne({ _id: new ObjectId(logId) });
+      await db.collection("mineral_logs").deleteOne({ date: log.date });
+
+      return {
+        statusCode: 200,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ message: "Daily log deleted successfully", inventory: updatedInventory }),
+      };
+    }
+
+    // ─── PUT: Edit a daily log entry ───
+    if (event.httpMethod === "PUT") {
+      if (!logId) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "Log id query parameter is required" }),
+        };
+      }
+
+      let body;
+      try {
+        body = JSON.parse(event.body);
+      } catch {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "Invalid JSON body" }),
+        };
+      }
+
+      const {
+        pets_produced_1_5L = 0,
+        pets_produced_0_5L = 0,
+        pets_sold_1_5L = 0,
+        pets_sold_0_5L = 0,
+        minerals_used = null,
+      } = body || {};
+
+      // Validate inputs
+      const numericFields = { pets_produced_1_5L, pets_produced_0_5L, pets_sold_1_5L, pets_sold_0_5L };
+      for (const [key, val] of Object.entries(numericFields)) {
+        if (typeof val !== "number" || val < 0) {
+          return {
+            statusCode: 400,
+            headers: CORS_HEADERS,
+            body: JSON.stringify({ error: `${key} must be a non-negative number` }),
+          };
+        }
+      }
+
+      const log = await db.collection("daily_logs").findOne({ _id: new ObjectId(logId) });
+      if (!log) {
+        return {
+          statusCode: 404,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "Daily log record not found" }),
+        };
+      }
+
+      const inventory = await getCurrentInventory(db);
+
+      // 1. Calculate new derived quantities
+      const new_bottles_used_1_5L = pets_produced_1_5L * 6;
+      const new_bottles_used_0_5L = pets_produced_0_5L * 12;
+      const new_caps_used = new_bottles_used_1_5L + new_bottles_used_0_5L;
+      const new_shelling_used_1_5L_kg = Math.round((pets_produced_1_5L / 38) * 10000) / 10000;
+      const new_shelling_used_0_5L_kg = Math.round((pets_produced_0_5L / 44) * 10000) / 10000;
+
+      const new_calcium_kg = minerals_used ? (Number(minerals_used.calcium_kg) || 0) : 0;
+      const new_magnesium_kg = minerals_used ? (Number(minerals_used.magnesium_kg) || 0) : 0;
+      const new_sodium_kg = minerals_used ? (Number(minerals_used.sodium_kg) || 0) : 0;
+
+      // 2. Adjust stock levels (Refund old usage, subtract new usage)
+      const adj_bottles_1_5L = (inventory.bottles_1_5L || 0) + (log.bottles_used_1_5L || 0) - new_bottles_used_1_5L;
+      const adj_bottles_0_5L = (inventory.bottles_0_5L || 0) + (log.bottles_used_0_5L || 0) - new_bottles_used_0_5L;
+      const adj_caps = (inventory.caps || 0) + (log.caps_used || 0) - new_caps_used;
+      const adj_shelling_1_5L_kg = Math.round(((inventory.shelling_1_5L_kg || 0) + (log.shelling_used_1_5L_kg || 0) - new_shelling_used_1_5L_kg) * 10000) / 10000;
+      const adj_shelling_0_5L_kg = Math.round(((inventory.shelling_0_5L_kg || 0) + (log.shelling_used_0_5L_kg || 0) - new_shelling_used_0_5L_kg) * 10000) / 10000;
+
+      const oldMinerals = log.minerals_used || {};
+      const adj_calcium_kg = Math.round(((inventory.calcium_kg || 0) + (oldMinerals.calcium_kg || 0) - new_calcium_kg) * 10000) / 10000;
+      const adj_magnesium_kg = Math.round(((inventory.magnesium_kg || 0) + (oldMinerals.magnesium_kg || 0) - new_magnesium_kg) * 10000) / 10000;
+      const adj_sodium_kg = Math.round(((inventory.sodium_kg || 0) + (oldMinerals.sodium_kg || 0) - new_sodium_kg) * 10000) / 10000;
+
+      // 3. Enforce stock levels availability check
+      const insufficient = [];
+      if (adj_bottles_1_5L < 0) insufficient.push("1.5L Bottles");
+      if (adj_bottles_0_5L < 0) insufficient.push("0.5L Bottles");
+      if (adj_caps < 0) insufficient.push("Caps");
+      if (adj_shelling_1_5L_kg < 0) insufficient.push("1.5L Shelling");
+      if (adj_shelling_0_5L_kg < 0) insufficient.push("0.5L Shelling");
+      if (adj_calcium_kg < 0) insufficient.push("Calcium");
+      if (adj_magnesium_kg < 0) insufficient.push("Magnesium");
+      if (adj_sodium_kg < 0) insufficient.push("Sodium");
+
+      if (insufficient.length > 0) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: `Cannot update daily log: stock levels for [${insufficient.join(", ")}] would drop below 0` }),
+        };
+      }
+
+      // 4. Update inventory object
+      const updatedInventory = {
+        ...inventory,
+        bottles_1_5L: adj_bottles_1_5L,
+        bottles_0_5L: adj_bottles_0_5L,
+        caps: adj_caps,
+        shelling_1_5L_kg: adj_shelling_1_5L_kg,
+        shelling_0_5L_kg: adj_shelling_0_5L_kg,
+        calcium_kg: adj_calcium_kg,
+        magnesium_kg: adj_magnesium_kg,
+        sodium_kg: adj_sodium_kg,
+        updated_at: new Date().toISOString()
+      };
+
+      const alertMetrics = checkLowInventory(updatedInventory);
+      updatedInventory.low_inventory_alert = alertMetrics.length > 0;
+      updatedInventory.alert_metrics = alertMetrics;
+
+      await db.collection("inventory").replaceOne({ _id: "current" }, updatedInventory, { upsert: true });
+
+      // 5. Update daily log document
+      const updatedLog = {
+        ...log,
+        pets_produced_1_5L,
+        pets_produced_0_5L,
+        pets_sold_1_5L,
+        pets_sold_0_5L,
+        bottles_used_1_5L: new_bottles_used_1_5L,
+        bottles_used_0_5L: new_bottles_used_0_5L,
+        caps_used: new_caps_used,
+        shelling_used_1_5L_kg: new_shelling_used_1_5L_kg,
+        shelling_used_0_5L_kg: new_shelling_used_0_5L_kg,
+        minerals_used: {
+          calcium_kg: new_calcium_kg,
+          magnesium_kg: new_magnesium_kg,
+          sodium_kg: new_sodium_kg,
+        },
+        updated_at: new Date().toISOString()
+      };
+
+      await db.collection("daily_logs").replaceOne({ _id: new ObjectId(logId) }, updatedLog);
+
+      // 6. Update mineral log
+      await db.collection("mineral_logs").deleteOne({ date: log.date });
+      if (new_calcium_kg > 0 || new_magnesium_kg > 0 || new_sodium_kg > 0) {
+        await db.collection("mineral_logs").insertOne({
+          date: log.date,
+          calcium_kg: new_calcium_kg,
+          magnesium_kg: new_magnesium_kg,
+          sodium_kg: new_sodium_kg,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      return {
+        statusCode: 200,
+        headers: CORS_HEADERS,
+        body: JSON.stringify({ message: "Daily log updated successfully", daily_log: updatedLog, inventory: updatedInventory }),
       };
     }
 

@@ -142,6 +142,54 @@ const API = (() => {
   }
 
   /**
+   * Edit daily log entry — PUT /daily-log?id=...
+   */
+  async function updateDailyLog(id, data) {
+    return request(`daily-log?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  /**
+   * Delete daily log entry — DELETE /daily-log?id=...
+   */
+  async function deleteDailyLog(id) {
+    return request(`daily-log?id=${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  /**
+   * Edit past addition transaction — PUT /inventory?additionId=...
+   */
+  async function updateAddition(id, data) {
+    return request(`inventory?additionId=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  /**
+   * Delete past addition transaction — DELETE /inventory?additionId=...
+   */
+  async function deleteAddition(id) {
+    return request(`inventory?additionId=${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  /**
+   * Overwrite baseline inventory directly — PUT /inventory?overwrite=true
+   */
+  async function overwriteInventory(data) {
+    return request('inventory?overwrite=true', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  /**
    * Logout — clear token and state.
    */
   function logout() {
@@ -160,6 +208,11 @@ const API = (() => {
     logDaily,
     getToday,
     getHistory,
+    updateDailyLog,
+    deleteDailyLog,
+    updateAddition,
+    deleteAddition,
+    overwriteInventory,
     logout,
     getToken,
     clearToken
