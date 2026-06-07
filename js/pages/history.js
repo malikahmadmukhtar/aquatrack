@@ -330,7 +330,8 @@ const HistoryPage = (() => {
 
     if (tab === 'daily') {
       tableHTML = `
-        <table class="data-table">
+        <!-- Desktop Table View -->
+        <table class="data-table desktop-only-table">
           <thead>
             <tr>
               <th>Date</th>
@@ -361,10 +362,51 @@ const HistoryPage = (() => {
             }).join('')}
           </tbody>
         </table>
+
+        <!-- Mobile Cards View -->
+        <div class="mobile-only-cards">
+          ${rows.map(r => {
+            const preview = Utils.calculatePreview(r.pets_produced_1_5L, r.pets_produced_0_5L);
+            return `
+              <div class="history-mobile-card">
+                <div class="card-mobile-header">
+                  <span class="card-mobile-date">📅 ${Utils.formatDate(r.date || r.created_at)}</span>
+                </div>
+                <div class="card-mobile-grid">
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Prod 1.5L</span>
+                    <span class="card-mobile-value">${Utils.formatNumber(r.pets_produced_1_5L || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Prod 0.5L</span>
+                    <span class="card-mobile-value">${Utils.formatNumber(r.pets_produced_0_5L || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Sold 1.5L</span>
+                    <span class="card-mobile-value">${Utils.formatNumber(r.pets_sold_1_5L || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Sold 0.5L</span>
+                    <span class="card-mobile-value">${Utils.formatNumber(r.pets_sold_0_5L || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Bottles</span>
+                    <span class="card-mobile-value">${Utils.formatNumber(preview.totalBottles)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Shelling</span>
+                    <span class="card-mobile-value">${Utils.formatKg(preview.totalShelling)}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
       `;
     } else if (tab === 'additions') {
       tableHTML = `
-        <table class="data-table">
+        <!-- Desktop Table View -->
+        <table class="data-table desktop-only-table">
           <thead>
             <tr>
               <th>Date</th>
@@ -397,10 +439,59 @@ const HistoryPage = (() => {
             }).join('')}
           </tbody>
         </table>
+
+        <!-- Mobile Cards View -->
+        <div class="mobile-only-cards">
+          ${rows.map(r => {
+            const added = r.added || {};
+            return `
+              <div class="history-mobile-card">
+                <div class="card-mobile-header">
+                  <span class="card-mobile-date">📦 ${Utils.formatDate(r.date || r.created_at)}</span>
+                </div>
+                <div class="card-mobile-grid">
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Bottles 1.5L</span>
+                    <span class="card-mobile-value">+${Utils.formatNumber(added.bottles_1_5L || r.bottles_1_5L || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Bottles 0.5L</span>
+                    <span class="card-mobile-value">+${Utils.formatNumber(added.bottles_0_5L || r.bottles_0_5L || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Caps</span>
+                    <span class="card-mobile-value">+${Utils.formatNumber(added.caps || r.caps || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Shell 1.5L</span>
+                    <span class="card-mobile-value">+${Utils.formatKg(added.shelling_1_5L_kg || r.shelling_1_5L_kg || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Shell 0.5L</span>
+                    <span class="card-mobile-value">+${Utils.formatKg(added.shelling_0_5L_kg || r.shelling_0_5L_kg || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Calcium</span>
+                    <span class="card-mobile-value">+${Utils.formatKg(added.calcium_kg || r.calcium_kg || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Magnesium</span>
+                    <span class="card-mobile-value">+${Utils.formatKg(added.magnesium_kg || r.magnesium_kg || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Sodium</span>
+                    <span class="card-mobile-value">+${Utils.formatKg(added.sodium_kg || r.sodium_kg || 0)}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
       `;
     } else if (tab === 'minerals') {
       tableHTML = `
-        <table class="data-table">
+        <!-- Desktop Table View -->
+        <table class="data-table desktop-only-table">
           <thead>
             <tr>
               <th>Date</th>
@@ -423,6 +514,34 @@ const HistoryPage = (() => {
             }).join('')}
           </tbody>
         </table>
+
+        <!-- Mobile Cards View -->
+        <div class="mobile-only-cards">
+          ${rows.map(r => {
+            const m = r.minerals_used || r;
+            return `
+              <div class="history-mobile-card">
+                <div class="card-mobile-header">
+                  <span class="card-mobile-date">🧪 ${Utils.formatDate(r.date || r.created_at)}</span>
+                </div>
+                <div class="card-mobile-grid">
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Calcium</span>
+                    <span class="card-mobile-value">${Utils.formatKg(m.calcium_kg || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Magnesium</span>
+                    <span class="card-mobile-value">${Utils.formatKg(m.magnesium_kg || 0)}</span>
+                  </div>
+                  <div class="card-mobile-item">
+                    <span class="card-mobile-label">Sodium</span>
+                    <span class="card-mobile-value">${Utils.formatKg(m.sodium_kg || 0)}</span>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
       `;
     }
 

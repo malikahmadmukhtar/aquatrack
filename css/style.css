@@ -1409,6 +1409,62 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   font-size: 0.85rem;
 }
 
+/* ============================================
+   MOBILE HISTORY CARDS
+   ============================================ */
+.desktop-only-table {
+  display: table;
+}
+
+.mobile-only-cards {
+  display: none;
+}
+
+.history-mobile-card {
+  background: rgba(255, 255, 255, 0.01);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 16px;
+}
+
+.history-mobile-card:last-child {
+  border-bottom: none;
+}
+
+.card-mobile-header {
+  margin-bottom: 12px;
+}
+
+.card-mobile-date {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--cyan);
+}
+
+.card-mobile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.card-mobile-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.card-mobile-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.card-mobile-value {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
 
 /* ============================================
    MOBILE HEADER
@@ -1651,6 +1707,14 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
   .table-container {
     -webkit-overflow-scrolling: touch;
+  }
+
+  .desktop-only-table {
+    display: none !important;
+  }
+
+  .mobile-only-cards {
+    display: block !important;
   }
 }
 
