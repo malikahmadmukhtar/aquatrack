@@ -195,6 +195,8 @@ const handler = async (event) => {
         pets_sold_1_5L = 0,
         pets_sold_0_5L = 0,
         minerals_used = null,
+        price_per_pet_1_5L = null,
+        price_per_pet_0_5L = null,
       } = body || {};
 
       // Validate inputs
@@ -207,6 +209,36 @@ const handler = async (event) => {
             body: JSON.stringify({ error: `${key} must be a non-negative number` }),
           };
         }
+      }
+
+      if (price_per_pet_1_5L !== null && (typeof price_per_pet_1_5L !== "number" || price_per_pet_1_5L < 0)) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "price_per_pet_1_5L must be a non-negative number" }),
+        };
+      }
+      if (price_per_pet_0_5L !== null && (typeof price_per_pet_0_5L !== "number" || price_per_pet_0_5L < 0)) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "price_per_pet_0_5L must be a non-negative number" }),
+        };
+      }
+
+      if (price_per_pet_1_5L !== null && pets_sold_1_5L <= 0) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "Adding 1.5L price requires a non-zero 1.5L sale number" }),
+        };
+      }
+      if (price_per_pet_0_5L !== null && pets_sold_0_5L <= 0) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "Adding 0.5L price requires a non-zero 0.5L sale number" }),
+        };
       }
 
       const log = await db.collection("daily_logs").findOne({ _id: new ObjectId(logId) });
@@ -289,6 +321,9 @@ const handler = async (event) => {
         pets_produced_0_5L,
         pets_sold_1_5L,
         pets_sold_0_5L,
+        price_per_pet_1_5L: price_per_pet_1_5L !== null ? Number(price_per_pet_1_5L) : null,
+        price_per_pet_0_5L: price_per_pet_0_5L !== null ? Number(price_per_pet_0_5L) : null,
+        calculated_revenue: (pets_sold_1_5L * (price_per_pet_1_5L || 0)) + (pets_sold_0_5L * (price_per_pet_0_5L || 0)),
         bottles_used_1_5L: new_bottles_used_1_5L,
         bottles_used_0_5L: new_bottles_used_0_5L,
         caps_used: new_caps_used,
@@ -342,6 +377,8 @@ const handler = async (event) => {
         pets_sold_1_5L = 0,
         pets_sold_0_5L = 0,
         minerals_used = null,
+        price_per_pet_1_5L = null,
+        price_per_pet_0_5L = null,
       } = body || {};
 
       // Validate numbers
@@ -354,6 +391,36 @@ const handler = async (event) => {
             body: JSON.stringify({ error: `${key} must be a non-negative number` }),
           };
         }
+      }
+
+      if (price_per_pet_1_5L !== null && (typeof price_per_pet_1_5L !== "number" || price_per_pet_1_5L < 0)) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "price_per_pet_1_5L must be a non-negative number" }),
+        };
+      }
+      if (price_per_pet_0_5L !== null && (typeof price_per_pet_0_5L !== "number" || price_per_pet_0_5L < 0)) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "price_per_pet_0_5L must be a non-negative number" }),
+        };
+      }
+
+      if (price_per_pet_1_5L !== null && pets_sold_1_5L <= 0) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "Adding 1.5L price requires a non-zero 1.5L sale number" }),
+        };
+      }
+      if (price_per_pet_0_5L !== null && pets_sold_0_5L <= 0) {
+        return {
+          statusCode: 400,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "Adding 0.5L price requires a non-zero 0.5L sale number" }),
+        };
       }
 
       // Calculate material usage from PRODUCED pets only
@@ -454,6 +521,9 @@ const handler = async (event) => {
         pets_produced_0_5L,
         pets_sold_1_5L,
         pets_sold_0_5L,
+        price_per_pet_1_5L: price_per_pet_1_5L !== null ? Number(price_per_pet_1_5L) : null,
+        price_per_pet_0_5L: price_per_pet_0_5L !== null ? Number(price_per_pet_0_5L) : null,
+        calculated_revenue: (pets_sold_1_5L * (price_per_pet_1_5L || 0)) + (pets_sold_0_5L * (price_per_pet_0_5L || 0)),
         bottles_used_1_5L,
         bottles_used_0_5L,
         caps_used,

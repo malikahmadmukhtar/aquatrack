@@ -196,9 +196,37 @@ const Utils = (() => {
     if (!el || !listEl) return;
 
     if (alertData && alertData.low_inventory_alert && alertData.alert_metrics && alertData.alert_metrics.length > 0) {
+      const labelMap = {
+        'bottles_1_5L': '1.5L Bottles',
+        'bottles_0_5L': '0.5L Bottles',
+        'caps': 'Caps',
+        'shelling_1_5L_kg': '1.5L Shelling',
+        'shelling_0_5L_kg': '0.5L Shelling',
+        'calcium_kg': 'Calcium',
+        'magnesium_kg': 'Magnesium',
+        'sodium_kg': 'Sodium'
+      };
+
+      const invSource = alertData.inventory ? alertData.inventory : alertData;
+
       const metricsText = alertData.alert_metrics
-        .map(m => `${m.name} (${Utils.formatPercent(m.percentage)})`)
+        .map(m => {
+          if (typeof m === 'string') {
+            const label = labelMap[m] || m;
+            const current = invSource[m] || 0;
+            const baseline = invSource[`${m}_at_last_addition`] || 0;
+            const percentage = baseline > 0 ? (current / baseline) * 100 : 0;
+            return `${label} (${formatPercent(percentage)})`;
+          }
+          if (m && typeof m === 'object') {
+            const label = labelMap[m.name] || m.name;
+            return `${label} (${formatPercent(m.percentage)})`;
+          }
+          return '';
+        })
+        .filter(t => t !== '')
         .join(', ');
+
       listEl.textContent = metricsText;
       el.classList.remove('hidden');
       localStorage.setItem('aquatrack_alert', JSON.stringify(alertData));

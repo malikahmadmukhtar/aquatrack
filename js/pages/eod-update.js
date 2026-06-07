@@ -56,17 +56,32 @@ const EODPage = (() => {
             <div class="form-section">
               <div class="section-label">
                 <span class="section-dot dot-emerald"></span>
-                Sales
+                Sales & Revenue (PKR)
               </div>
               <div class="form-row">
                 <div class="form-group">
                   <label for="log-sold-15">PETs Sold 1.5L</label>
-                  <input type="number" id="log-sold-15" min="0" step="1" placeholder="0">
+                  <input type="number" id="log-sold-15" min="0" step="1" placeholder="0" class="revenue-calc-input">
                 </div>
                 <div class="form-group">
                   <label for="log-sold-05">PETs Sold 0.5L</label>
-                  <input type="number" id="log-sold-05" min="0" step="1" placeholder="0">
+                  <input type="number" id="log-sold-05" min="0" step="1" placeholder="0" class="revenue-calc-input">
                 </div>
+              </div>
+              <div class="form-row" style="margin-top: 12px;">
+                <div class="form-group">
+                  <label for="log-price-15">Price per PET 1.5L (PKR)</label>
+                  <input type="number" id="log-price-15" min="0" step="0.01" placeholder="Optional PKR" class="revenue-calc-input">
+                </div>
+                <div class="form-group">
+                  <label for="log-price-05">Price per PET 0.5L (PKR)</label>
+                  <input type="number" id="log-price-05" min="0" step="0.01" placeholder="Optional PKR" class="revenue-calc-input">
+                </div>
+              </div>
+              <!-- Live Revenue Display -->
+              <div id="revenue-calc-display" class="hidden" style="margin-top: 14px; padding: 12px; background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">Calculated Total Revenue:</span>
+                <span id="revenue-amount" style="font-size: 1.1rem; font-weight: 700; color: var(--emerald);">0.00 PKR</span>
               </div>
             </div>
 
@@ -185,6 +200,29 @@ const EODPage = (() => {
   }
 
   /**
+   * Update live calculated total revenue in PKR.
+   */
+  function updateRevenue() {
+    const s15 = Number(document.getElementById('log-sold-15')?.value) || 0;
+    const s05 = Number(document.getElementById('log-sold-05')?.value) || 0;
+    const pr15 = Number(document.getElementById('log-price-15')?.value) || 0;
+    const pr05 = Number(document.getElementById('log-price-05')?.value) || 0;
+
+    const totalRevenue = (s15 * pr15) + (s05 * pr05);
+    const displayEl = document.getElementById('revenue-calc-display');
+    const amountEl = document.getElementById('revenue-amount');
+
+    if (displayEl && amountEl) {
+      if (totalRevenue > 0) {
+        amountEl.textContent = `${Utils.formatNumber(totalRevenue)} PKR`;
+        displayEl.classList.remove('hidden');
+      } else {
+        displayEl.classList.add('hidden');
+      }
+    }
+  }
+
+  /**
    * Handle Daily Log form submit.
    */
   async function handleDailyLogSubmit(e) {
@@ -193,11 +231,16 @@ const EODPage = (() => {
     const btnText = btn.querySelector('.btn-text');
     const btnLoader = btn.querySelector('.btn-loader');
 
+    const price15Input = document.getElementById('log-price-15');
+    const price05Input = document.getElementById('log-price-05');
+
     const data = {
       pets_produced_1_5L: Number(document.getElementById('log-produced-15').value) || 0,
       pets_produced_0_5L: Number(document.getElementById('log-produced-05').value) || 0,
       pets_sold_1_5L: Number(document.getElementById('log-sold-15').value) || 0,
       pets_sold_0_5L: Number(document.getElementById('log-sold-05').value) || 0,
+      price_per_pet_1_5L: price15Input && price15Input.value !== '' ? Number(price15Input.value) : null,
+      price_per_pet_0_5L: price05Input && price05Input.value !== '' ? Number(price05Input.value) : null,
       minerals_used: {
         calcium_kg: Number(document.getElementById('log-calcium').value) || 0,
         magnesium_kg: Number(document.getElementById('log-magnesium').value) || 0,
@@ -212,6 +255,15 @@ const EODPage = (() => {
       return;
     }
 
+    if (data.price_per_pet_1_5L !== null && data.pets_sold_1_5L <= 0) {
+      Utils.showToast('Please enter a sold quantity for 1.5L PET to set its price.', 'warning');
+      return;
+    }
+    if (data.price_per_pet_0_5L !== null && data.pets_sold_0_5L <= 0) {
+      Utils.showToast('Please enter a sold quantity for 0.5L PET to set its price.', 'warning');
+      return;
+    }
+
     btn.disabled = true;
     btnText.classList.add('hidden');
     btnLoader.classList.remove('hidden');
@@ -221,6 +273,7 @@ const EODPage = (() => {
       Utils.showToast('Daily log submitted successfully!', 'success');
       e.target.reset();
       updatePreview();
+      updateRevenue();
       loadCurrentInventory();
       
       // Update the low stock persistent alerts toast
@@ -255,6 +308,11 @@ const EODPage = (() => {
     // Live preview listeners
     document.querySelectorAll('.preview-input').forEach(input => {
       input.addEventListener('input', updatePreview);
+    });
+
+    // Live revenue calculation listeners
+    document.querySelectorAll('.revenue-calc-input').forEach(input => {
+      input.addEventListener('input', updateRevenue);
     });
 
     // Minerals collapsible toggle

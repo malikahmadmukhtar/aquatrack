@@ -10,10 +10,26 @@ const AddInventoryPage = (() => {
   function getHTML() {
     return `
       <div class="page-header fade-in">
-        <h2 class="page-title">Add Inventory</h2>
-        <p class="page-subtitle">Add new stock or correct baseline inventory metrics</p>
+        <h2 class="page-title">Inventory</h2>
+        <p class="page-subtitle">Manage stock levels, correct baseline metrics, and review current inventory</p>
       </div>
 
+      <!-- Current Inventory Cards Grid -->
+      <div class="section-title fade-in-delay">
+        <span class="section-dot dot-cyan"></span>
+        Current Stock Status
+      </div>
+      <div id="current-inventory-cards" class="stats-grid stats-grid-4 fade-in-delay" style="margin-bottom: 32px;">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Loading current stock...</p>
+        </div>
+      </div>
+
+      <div class="section-title fade-in-delay">
+        <span class="section-dot dot-purple"></span>
+        Update Inventory
+      </div>
       <div class="inventory-grid fade-in-delay">
         <div class="glass-card card-hover max-width-card">
           <div class="card-header">
@@ -30,11 +46,6 @@ const AddInventoryPage = (() => {
               <button type="button" class="toggle-btn active" id="mode-add-btn">📦 Add Stock</button>
               <button type="button" class="toggle-btn" id="mode-overwrite-btn">🔧 Direct Correct</button>
             </div>
-          </div>
-
-          <!-- Current inventory summary -->
-          <div id="current-inventory-pills" class="inventory-pills">
-            <div class="pill-skeleton"></div>
           </div>
 
           <form id="inventory-form" class="form-stack">
@@ -105,27 +116,59 @@ const AddInventoryPage = (() => {
   }
 
   /**
-   * Load and display current inventory pills.
+   * Load and display current inventory cards.
    */
   async function loadCurrentInventory() {
-    const pillsEl = document.getElementById('current-inventory-pills');
-    if (!pillsEl) return;
+    const cardsEl = document.getElementById('current-inventory-cards');
+    if (!cardsEl) return;
 
     try {
       const data = await API.getInventory();
       const inv = data.inventory || data;
-      pillsEl.innerHTML = `
-        <div class="pill">🧴 Bottles 1.5L: <strong>${Utils.formatNumber(inv.bottles_1_5L || 0)}</strong></div>
-        <div class="pill">🧴 Bottles 0.5L: <strong>${Utils.formatNumber(inv.bottles_0_5L || 0)}</strong></div>
-        <div class="pill">🔵 Caps: <strong>${Utils.formatNumber(inv.caps || 0)}</strong></div>
-        <div class="pill">📦 Shell 1.5L: <strong>${Utils.formatKg(inv.shelling_1_5L_kg || 0)}</strong></div>
-        <div class="pill">📦 Shell 0.5L: <strong>${Utils.formatKg(inv.shelling_0_5L_kg || 0)}</strong></div>
-        <div class="pill">🧪 Ca: <strong>${Utils.formatKg(inv.calcium_kg || 0)}</strong></div>
-        <div class="pill">🧪 Mg: <strong>${Utils.formatKg(inv.magnesium_kg || 0)}</strong></div>
-        <div class="pill">🧪 Na: <strong>${Utils.formatKg(inv.sodium_kg || 0)}</strong></div>
-      `;
+
+      const items = [
+        { label: 'Bottles 1.5L', current: inv.bottles_1_5L || 0, baseline: inv.bottles_1_5L_at_last_addition || 0, icon: '🧴', isKg: false, key: 'bottles_1_5L', colorClass: 'cyan' },
+        { label: 'Bottles 0.5L', current: inv.bottles_0_5L || 0, baseline: inv.bottles_0_5L_at_last_addition || 0, icon: '🧴', isKg: false, key: 'bottles_0_5L', colorClass: 'purple' },
+        { label: 'Caps', current: inv.caps || 0, baseline: inv.caps_at_last_addition || 0, icon: '🔵', isKg: false, key: 'caps', colorClass: 'amber' },
+        { label: 'Shelling 1.5L', current: inv.shelling_1_5L_kg || 0, baseline: inv.shelling_1_5L_kg_at_last_addition || 0, icon: '📦', isKg: true, key: 'shelling_1_5L_kg', colorClass: 'cyan' },
+        { label: 'Shelling 0.5L', current: inv.shelling_0_5L_kg || 0, baseline: inv.shelling_0_5L_kg_at_last_addition || 0, icon: '📦', isKg: true, key: 'shelling_0_5L_kg', colorClass: 'purple' },
+        { label: 'Calcium', current: inv.calcium_kg || 0, baseline: inv.calcium_kg_at_last_addition || 0, icon: '🧪', isKg: true, key: 'calcium_kg', colorClass: 'emerald' },
+        { label: 'Magnesium', current: inv.magnesium_kg || 0, baseline: inv.magnesium_kg_at_last_addition || 0, icon: '🧪', isKg: true, key: 'magnesium_kg', colorClass: 'emerald' },
+        { label: 'Sodium', current: inv.sodium_kg || 0, baseline: inv.sodium_kg_at_last_addition || 0, icon: '🧪', isKg: true, key: 'sodium_kg', colorClass: 'emerald' }
+      ];
+
+      cardsEl.innerHTML = items.map(item => {
+        const isLow = item.baseline > 0 && item.current <= item.baseline * 0.25;
+        const displayValue = item.isKg ? Utils.formatKg(item.current) : Utils.formatNumber(item.current);
+        const cardClass = isLow ? 'stat-card glass-card card-hover low-stock-alert' : 'stat-card glass-card card-hover';
+        const valueClass = isLow ? 'stat-value text-rose' : 'stat-value';
+        const pctText = item.baseline > 0 ? ` (${Math.round((item.current / item.baseline) * 100)}%)` : '';
+
+        return `
+          <div class="${cardClass}">
+            <div class="stat-icon stat-icon-${item.colorClass}">
+              ${item.icon}
+            </div>
+            <div class="stat-info">
+              <div class="stat-label">
+                ${item.label}${isLow ? ' <span class="badge-danger">LOW</span>' : ''}
+              </div>
+              <div class="${valueClass}" ${item.isKg ? 'style="font-size: 1.5rem;"' : ''}>
+                ${displayValue}
+                ${isLow ? `<span class="low-stock-pct">${pctText}</span>` : ''}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
     } catch (err) {
-      pillsEl.innerHTML = `<div class="pill pill-error">Could not load inventory</div>`;
+      cardsEl.innerHTML = `
+        <div class="empty-state glass-card" style="grid-column: 1 / -1;">
+          <div class="empty-icon">⚠️</div>
+          <h3>Error Loading Inventory</h3>
+          <p>${err.message}</p>
+        </div>
+      `;
     }
   }
 

@@ -340,6 +340,7 @@ const HistoryPage = (() => {
               <th>Produced 0.5L</th>
               <th>Sold 1.5L</th>
               <th>Sold 0.5L</th>
+              <th>Revenue (PKR)</th>
               <th>Bottles Used</th>
               <th>Caps Used</th>
               <th>Shelling (kg)</th>
@@ -349,6 +350,7 @@ const HistoryPage = (() => {
           <tbody>
             ${rows.map(r => {
               const preview = Utils.calculatePreview(r.pets_produced_1_5L, r.pets_produced_0_5L);
+              const revenueStr = r.calculated_revenue ? `${Utils.formatNumber(r.calculated_revenue)} PKR` : '—';
               return `
                 <tr>
                   <td>${Utils.formatDate(r.date || r.created_at)}</td>
@@ -356,6 +358,7 @@ const HistoryPage = (() => {
                   <td>${Utils.formatNumber(r.pets_produced_0_5L || 0)}</td>
                   <td>${Utils.formatNumber(r.pets_sold_1_5L || 0)}</td>
                   <td>${Utils.formatNumber(r.pets_sold_0_5L || 0)}</td>
+                  <td>${revenueStr}</td>
                   <td>${Utils.formatNumber(preview.totalBottles)}</td>
                   <td>${Utils.formatNumber(preview.totalCaps)}</td>
                   <td>${Utils.formatKg(preview.totalShelling)}</td>
@@ -375,6 +378,7 @@ const HistoryPage = (() => {
         <div class="mobile-only-cards">
           ${rows.map(r => {
             const preview = Utils.calculatePreview(r.pets_produced_1_5L, r.pets_produced_0_5L);
+            const revenueStr = r.calculated_revenue ? `${Utils.formatNumber(r.calculated_revenue)} PKR` : '—';
             return `
               <div class="history-mobile-card">
                 <div class="card-mobile-header">
@@ -408,6 +412,10 @@ const HistoryPage = (() => {
                   <div class="card-mobile-item">
                     <span class="card-mobile-label">Shelling</span>
                     <span class="card-mobile-value">${Utils.formatKg(preview.totalShelling)}</span>
+                  </div>
+                  <div class="card-mobile-item" style="grid-column: span 2; margin-top: 4px; padding-top: 8px; border-top: 1px dashed var(--border-subtle); flex-direction: row; justify-content: space-between; align-items: center;">
+                    <span class="card-mobile-label" style="text-transform: uppercase; margin-bottom: 0;">Total Revenue</span>
+                    <span class="card-mobile-value" style="color: var(--emerald); font-weight: 700; font-size: 0.95rem;">${revenueStr}</span>
                   </div>
                 </div>
               </div>
@@ -705,6 +713,16 @@ const HistoryPage = (() => {
               <input type="number" id="edit-sold-05" min="0" step="1" value="${record.pets_sold_0_5L || 0}" required>
             </div>
           </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="edit-price-15">Price 1.5L (PKR)</label>
+              <input type="number" id="edit-price-15" min="0" step="0.01" value="${record.price_per_pet_1_5L !== null && record.price_per_pet_1_5L !== undefined ? record.price_per_pet_1_5L : ''}" placeholder="Optional PKR">
+            </div>
+            <div class="form-group">
+              <label for="edit-price-05">Price 0.5L (PKR)</label>
+              <input type="number" id="edit-price-05" min="0" step="0.01" value="${record.price_per_pet_0_5L !== null && record.price_per_pet_0_5L !== undefined ? record.price_per_pet_0_5L : ''}" placeholder="Optional PKR">
+            </div>
+          </div>
         </div>
         <div class="form-divider"></div>
         <div class="form-section">
@@ -737,17 +755,37 @@ const HistoryPage = (() => {
         btnText.classList.add('hidden');
         btnLoader.classList.remove('hidden');
 
+        const price15El = document.getElementById('edit-price-15');
+        const price05El = document.getElementById('edit-price-05');
+
         const data = {
           pets_produced_1_5L: Number(document.getElementById('edit-prod-15').value) || 0,
           pets_produced_0_5L: Number(document.getElementById('edit-prod-05').value) || 0,
           pets_sold_1_5L: Number(document.getElementById('edit-sold-15').value) || 0,
           pets_sold_0_5L: Number(document.getElementById('edit-sold-05').value) || 0,
+          price_per_pet_1_5L: price15El && price15El.value !== '' ? Number(price15El.value) : null,
+          price_per_pet_0_5L: price05El && price05El.value !== '' ? Number(price05El.value) : null,
           minerals_used: {
             calcium_kg: Number(document.getElementById('edit-calcium').value) || 0,
             magnesium_kg: Number(document.getElementById('edit-magnesium').value) || 0,
             sodium_kg: Number(document.getElementById('edit-sodium').value) || 0
           }
         };
+
+        if (data.price_per_pet_1_5L !== null && data.pets_sold_1_5L <= 0) {
+          Utils.showToast('Please enter a sold quantity for 1.5L PET to set its price.', 'warning');
+          btn.disabled = false;
+          btnText.classList.remove('hidden');
+          btnLoader.classList.add('hidden');
+          return;
+        }
+        if (data.price_per_pet_0_5L !== null && data.pets_sold_0_5L <= 0) {
+          Utils.showToast('Please enter a sold quantity for 0.5L PET to set its price.', 'warning');
+          btn.disabled = false;
+          btnText.classList.remove('hidden');
+          btnLoader.classList.add('hidden');
+          return;
+        }
 
         try {
           const response = await API.updateDailyLog(id, data);

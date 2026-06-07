@@ -1665,16 +1665,16 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   }
 
   .persistent-alert {
-    top: auto;
-    bottom: 72px;
+    top: 68px; /* Below the 56px fixed header */
+    bottom: auto;
     right: 8px;
     left: 8px;
     max-width: none;
   }
 
   .toast-container {
-    top: auto;
-    bottom: 72px;
+    top: 12px; /* Overlays the header area for high visibility */
+    bottom: auto;
     right: 8px;
     left: 8px;
     max-width: none;
@@ -2027,4 +2027,43 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
     font-size: 1.75rem;
   }
 }
+
+/* ============================================
+   LOW STOCK ALERT STYLING
+   ============================================ */
+.low-stock-alert {
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.08) !important;
+}
+
+.low-stock-alert:hover {
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15), 0 0 15px var(--rose-glow) !important;
+}
+
+.text-rose {
+  color: var(--rose) !important;
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: var(--rose) !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+  font-size: 0.65rem !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  margin-left: 6px !important;
+  display: inline-block !important;
+  vertical-align: middle !important;
+  letter-spacing: 0.5px !important;
+  font-weight: 700 !important;
+}
+
+.low-stock-pct {
+  font-size: 0.8rem !important;
+  font-weight: 500 !important;
+  color: var(--text-secondary) !important;
+  margin-left: 4px !important;
+}
+
 
