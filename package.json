@@ -1,0 +1,14 @@
+{
+  "name": "inventory-manager",
+  "version": "1.0.0",
+  "description": "Water bottle inventory management system",
+  "scripts": {
+    "dev": "netlify dev",
+    "setup": "node scripts/setup.js"
+  },
+  "dependencies": {
+    "mongodb": "^6.12.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2"
+  }
+}
