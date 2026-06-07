@@ -26,19 +26,19 @@ const HistoryPage = (() => {
       </div>
 
       <!-- Date Filter Panel -->
-      <div class="glass-card filter-card fade-in" style="margin-bottom: 24px; padding: 20px;">
-        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;">
-          <div class="form-group" style="flex: 1; min-width: 150px;">
-            <label style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Start Date</label>
-            <input type="date" id="filter-start-date" style="margin-top: 6px; padding: 10px 14px; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); outline: none; width: 100%;">
+      <div class="glass-card filter-card fade-in">
+        <div class="filter-row">
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" id="filter-start-date">
           </div>
-          <div class="form-group" style="flex: 1; min-width: 150px;">
-            <label style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">End Date</label>
-            <input type="date" id="filter-end-date" style="margin-top: 6px; padding: 10px 14px; background: var(--bg-input); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); color: var(--text-primary); outline: none; width: 100%;">
+          <div class="form-group">
+            <label>End Date</label>
+            <input type="date" id="filter-end-date">
           </div>
-          <div style="display: flex; gap: 10px; min-width: 200px;">
-            <button class="btn btn-gradient" id="apply-filter-btn" style="flex: 1; padding: 10px 16px; font-size: 0.85rem;">Filter</button>
-            <button class="btn btn-outline" id="clear-filter-btn" style="flex: 1; padding: 10px 16px; font-size: 0.85rem; border: 1px solid var(--border-subtle); background: transparent; color: var(--text-secondary);">Clear</button>
+          <div class="filter-actions">
+            <button class="btn btn-gradient" id="apply-filter-btn">Filter</button>
+            <button class="btn btn-outline" id="clear-filter-btn">Clear</button>
           </div>
         </div>
       </div>
