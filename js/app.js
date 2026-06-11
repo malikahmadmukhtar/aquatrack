@@ -8,7 +8,8 @@ const App = (() => {
     inventory: AddInventoryPage,
     eod: EODPage,
     today: TodayPage,
-    history: HistoryPage
+    history: HistoryPage,
+    expenses: ExpensesPage
   };
 
   let currentPage = null;
@@ -120,6 +121,9 @@ const App = (() => {
    * Initialize the application.
    */
   function init() {
+    // Prevent scroll wheel from silently changing number input values
+    Utils.preventNumberInputScroll();
+
     // Auth gate
     if (API.isAuthenticated()) {
       showApp();

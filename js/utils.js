@@ -187,6 +187,21 @@ const Utils = (() => {
     }
   }
 
+  let alertCloseBound = false;
+
+  function bindAlertClose() {
+    if (alertCloseBound) return;
+    const closeBtn = document.getElementById('alert-close-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        const el = document.getElementById('persistent-alert');
+        if (el) el.classList.add('hidden');
+        sessionStorage.setItem('dismissed_low_inventory_alert', 'true');
+      });
+      alertCloseBound = true;
+    }
+  }
+
   /**
    * Show/hide the persistent low-inventory alert.
    */
@@ -195,7 +210,23 @@ const Utils = (() => {
     const listEl = document.getElementById('alert-metrics-list');
     if (!el || !listEl) return;
 
+    bindAlertClose();
+
     if (alertData && alertData.low_inventory_alert && alertData.alert_metrics && alertData.alert_metrics.length > 0) {
+      // If the alert metrics have changed, reset the session dismissal
+      const currentAlerts = JSON.stringify(alertData.alert_metrics);
+      const lastSeenAlerts = localStorage.getItem('last_seen_alerts');
+      if (lastSeenAlerts !== currentAlerts) {
+        sessionStorage.removeItem('dismissed_low_inventory_alert');
+        localStorage.setItem('last_seen_alerts', currentAlerts);
+      }
+
+      // Respect session dismissal
+      if (sessionStorage.getItem('dismissed_low_inventory_alert') === 'true') {
+        el.classList.add('hidden');
+        return;
+      }
+
       const labelMap = {
         'bottles_1_5L': '1.5L Bottles',
         'bottles_0_5L': '0.5L Bottles',
@@ -240,6 +271,7 @@ const Utils = (() => {
    * Restore persisted alert on page load.
    */
   function restoreAlert() {
+    bindAlertClose();
     const stored = localStorage.getItem('aquatrack_alert');
     if (stored) {
       try {
@@ -266,6 +298,20 @@ const Utils = (() => {
     return template.content.firstChild;
   }
 
+  /**
+   * Prevent scroll wheel from changing values in focused number inputs.
+   * This is a common browser behavior where scrolling over a focused
+   * <input type="number"> increments/decrements the value instead of
+   * scrolling the page, causing silent data corruption.
+   */
+  function preventNumberInputScroll() {
+    document.addEventListener('wheel', function(e) {
+      if (document.activeElement && document.activeElement.type === 'number') {
+        document.activeElement.blur();
+      }
+    }, { passive: true });
+  }
+
   return {
     formatNumber,
     formatKg,
@@ -279,6 +325,7 @@ const Utils = (() => {
     updatePersistentAlert,
     restoreAlert,
     getStatusColor,
-    createElement
+    createElement,
+    preventNumberInputScroll
   };
 })();

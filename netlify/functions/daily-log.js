@@ -9,7 +9,7 @@ const CORS_HEADERS = {
 };
 
 function getTodayDate() {
-  return new Date().toISOString().split("T")[0];
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Karachi' });
 }
 
 async function getCurrentInventory(db) {
@@ -189,42 +189,87 @@ const handler = async (event) => {
         };
       }
 
-      const {
-        pets_produced_1_5L = 0,
-        pets_produced_0_5L = 0,
-        pets_sold_1_5L = 0,
-        pets_sold_0_5L = 0,
-        minerals_used = null,
-        price_per_pet_1_5L = null,
-        price_per_pet_0_5L = null,
-      } = body || {};
+      const log = await db.collection("daily_logs").findOne({ _id: new ObjectId(logId) });
+      if (!log) {
+        return {
+          statusCode: 404,
+          headers: CORS_HEADERS,
+          body: JSON.stringify({ error: "Daily log record not found" }),
+        };
+      }
+
+      const raw_pets_produced_1_5L = body.pets_produced_1_5L;
+      const raw_pets_produced_0_5L = body.pets_produced_0_5L;
+      const raw_pets_sold_1_5L = body.pets_sold_1_5L;
+      const raw_pets_sold_0_5L = body.pets_sold_0_5L;
+      const raw_price_per_pet_1_5L = body.price_per_pet_1_5L;
+      const raw_price_per_pet_0_5L = body.price_per_pet_0_5L;
+      const raw_minerals_used = body.minerals_used || {};
 
       // Validate inputs
-      const numericFields = { pets_produced_1_5L, pets_produced_0_5L, pets_sold_1_5L, pets_sold_0_5L };
-      for (const [key, val] of Object.entries(numericFields)) {
-        if (typeof val !== "number" || val < 0) {
-          return {
-            statusCode: 400,
-            headers: CORS_HEADERS,
-            body: JSON.stringify({ error: `${key} must be a non-negative number` }),
-          };
+      const rawNumericFields = {
+        pets_produced_1_5L: raw_pets_produced_1_5L,
+        pets_produced_0_5L: raw_pets_produced_0_5L,
+        pets_sold_1_5L: raw_pets_sold_1_5L,
+        pets_sold_0_5L: raw_pets_sold_0_5L,
+      };
+      for (const [key, val] of Object.entries(rawNumericFields)) {
+        if (val !== null && val !== undefined) {
+          if (typeof val !== "number" || val < 0) {
+            return {
+              statusCode: 400,
+              headers: CORS_HEADERS,
+              body: JSON.stringify({ error: `${key} must be a non-negative number` }),
+            };
+          }
         }
       }
 
-      if (price_per_pet_1_5L !== null && (typeof price_per_pet_1_5L !== "number" || price_per_pet_1_5L < 0)) {
+      if (raw_price_per_pet_1_5L !== null && raw_price_per_pet_1_5L !== undefined && (typeof raw_price_per_pet_1_5L !== "number" || raw_price_per_pet_1_5L < 0)) {
         return {
           statusCode: 400,
           headers: CORS_HEADERS,
           body: JSON.stringify({ error: "price_per_pet_1_5L must be a non-negative number" }),
         };
       }
-      if (price_per_pet_0_5L !== null && (typeof price_per_pet_0_5L !== "number" || price_per_pet_0_5L < 0)) {
+      if (raw_price_per_pet_0_5L !== null && raw_price_per_pet_0_5L !== undefined && (typeof raw_price_per_pet_0_5L !== "number" || raw_price_per_pet_0_5L < 0)) {
         return {
           statusCode: 400,
           headers: CORS_HEADERS,
           body: JSON.stringify({ error: "price_per_pet_0_5L must be a non-negative number" }),
         };
       }
+
+      const rawMineralsFields = {
+        calcium_kg: raw_minerals_used.calcium_kg,
+        magnesium_kg: raw_minerals_used.magnesium_kg,
+        sodium_kg: raw_minerals_used.sodium_kg,
+      };
+      for (const [key, val] of Object.entries(rawMineralsFields)) {
+        if (val !== null && val !== undefined) {
+          if (typeof val !== "number" || val < 0) {
+            return {
+              statusCode: 400,
+              headers: CORS_HEADERS,
+              body: JSON.stringify({ error: `minerals_used.${key} must be a non-negative number` }),
+            };
+          }
+        }
+      }
+
+      // Resolve targets, fallback to db log
+      const pets_produced_1_5L = (raw_pets_produced_1_5L !== null && raw_pets_produced_1_5L !== undefined) ? raw_pets_produced_1_5L : (log.pets_produced_1_5L || 0);
+      const pets_produced_0_5L = (raw_pets_produced_0_5L !== null && raw_pets_produced_0_5L !== undefined) ? raw_pets_produced_0_5L : (log.pets_produced_0_5L || 0);
+      const pets_sold_1_5L = (raw_pets_sold_1_5L !== null && raw_pets_sold_1_5L !== undefined) ? raw_pets_sold_1_5L : (log.pets_sold_1_5L || 0);
+      const pets_sold_0_5L = (raw_pets_sold_0_5L !== null && raw_pets_sold_0_5L !== undefined) ? raw_pets_sold_0_5L : (log.pets_sold_0_5L || 0);
+
+      const price_per_pet_1_5L = (raw_price_per_pet_1_5L !== null && raw_price_per_pet_1_5L !== undefined) ? raw_price_per_pet_1_5L : (log.price_per_pet_1_5L !== undefined ? log.price_per_pet_1_5L : null);
+      const price_per_pet_0_5L = (raw_price_per_pet_0_5L !== null && raw_price_per_pet_0_5L !== undefined) ? raw_price_per_pet_0_5L : (log.price_per_pet_0_5L !== undefined ? log.price_per_pet_0_5L : null);
+
+      const oldMinerals = log.minerals_used || {};
+      const new_calcium_kg = (raw_minerals_used.calcium_kg !== null && raw_minerals_used.calcium_kg !== undefined) ? raw_minerals_used.calcium_kg : (oldMinerals.calcium_kg || 0);
+      const new_magnesium_kg = (raw_minerals_used.magnesium_kg !== null && raw_minerals_used.magnesium_kg !== undefined) ? raw_minerals_used.magnesium_kg : (oldMinerals.magnesium_kg || 0);
+      const new_sodium_kg = (raw_minerals_used.sodium_kg !== null && raw_minerals_used.sodium_kg !== undefined) ? raw_minerals_used.sodium_kg : (oldMinerals.sodium_kg || 0);
 
       if (price_per_pet_1_5L !== null && pets_sold_1_5L <= 0) {
         return {
@@ -241,15 +286,6 @@ const handler = async (event) => {
         };
       }
 
-      const log = await db.collection("daily_logs").findOne({ _id: new ObjectId(logId) });
-      if (!log) {
-        return {
-          statusCode: 404,
-          headers: CORS_HEADERS,
-          body: JSON.stringify({ error: "Daily log record not found" }),
-        };
-      }
-
       const inventory = await getCurrentInventory(db);
 
       // 1. Calculate new derived quantities
@@ -259,10 +295,6 @@ const handler = async (event) => {
       const new_shelling_used_1_5L_kg = Math.round((pets_produced_1_5L / 38) * 10000) / 10000;
       const new_shelling_used_0_5L_kg = Math.round((pets_produced_0_5L / 44) * 10000) / 10000;
 
-      const new_calcium_kg = minerals_used ? (Number(minerals_used.calcium_kg) || 0) : 0;
-      const new_magnesium_kg = minerals_used ? (Number(minerals_used.magnesium_kg) || 0) : 0;
-      const new_sodium_kg = minerals_used ? (Number(minerals_used.sodium_kg) || 0) : 0;
-
       // 2. Adjust stock levels (Refund old usage, subtract new usage)
       const adj_bottles_1_5L = (inventory.bottles_1_5L || 0) + (log.bottles_used_1_5L || 0) - new_bottles_used_1_5L;
       const adj_bottles_0_5L = (inventory.bottles_0_5L || 0) + (log.bottles_used_0_5L || 0) - new_bottles_used_0_5L;
@@ -270,7 +302,6 @@ const handler = async (event) => {
       const adj_shelling_1_5L_kg = Math.round(((inventory.shelling_1_5L_kg || 0) + (log.shelling_used_1_5L_kg || 0) - new_shelling_used_1_5L_kg) * 10000) / 10000;
       const adj_shelling_0_5L_kg = Math.round(((inventory.shelling_0_5L_kg || 0) + (log.shelling_used_0_5L_kg || 0) - new_shelling_used_0_5L_kg) * 10000) / 10000;
 
-      const oldMinerals = log.minerals_used || {};
       const adj_calcium_kg = Math.round(((inventory.calcium_kg || 0) + (oldMinerals.calcium_kg || 0) - new_calcium_kg) * 10000) / 10000;
       const adj_magnesium_kg = Math.round(((inventory.magnesium_kg || 0) + (oldMinerals.magnesium_kg || 0) - new_magnesium_kg) * 10000) / 10000;
       const adj_sodium_kg = Math.round(((inventory.sodium_kg || 0) + (oldMinerals.sodium_kg || 0) - new_sodium_kg) * 10000) / 10000;
@@ -371,15 +402,13 @@ const handler = async (event) => {
         };
       }
 
-      const {
-        pets_produced_1_5L = 0,
-        pets_produced_0_5L = 0,
-        pets_sold_1_5L = 0,
-        pets_sold_0_5L = 0,
-        minerals_used = null,
-        price_per_pet_1_5L = null,
-        price_per_pet_0_5L = null,
-      } = body || {};
+      const pets_produced_1_5L = body.pets_produced_1_5L !== null && body.pets_produced_1_5L !== undefined ? body.pets_produced_1_5L : 0;
+      const pets_produced_0_5L = body.pets_produced_0_5L !== null && body.pets_produced_0_5L !== undefined ? body.pets_produced_0_5L : 0;
+      const pets_sold_1_5L = body.pets_sold_1_5L !== null && body.pets_sold_1_5L !== undefined ? body.pets_sold_1_5L : 0;
+      const pets_sold_0_5L = body.pets_sold_0_5L !== null && body.pets_sold_0_5L !== undefined ? body.pets_sold_0_5L : 0;
+      const price_per_pet_1_5L = body.price_per_pet_1_5L !== undefined ? body.price_per_pet_1_5L : null;
+      const price_per_pet_0_5L = body.price_per_pet_0_5L !== undefined ? body.price_per_pet_0_5L : null;
+      const minerals_used = body.minerals_used || null;
 
       // Validate numbers
       const numericFields = { pets_produced_1_5L, pets_produced_0_5L, pets_sold_1_5L, pets_sold_0_5L };

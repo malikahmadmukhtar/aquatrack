@@ -173,9 +173,9 @@ a:hover { color: #5ef0ff; }
 
 .login-card {
   position: relative;
-  width: 100%;
-  max-width: 420px;
-  padding: 48px 40px;
+  width: 90%;
+  max-width: 320px;
+  padding: 36px 24px;
   animation: loginCardEnter 0.6s ease-out;
 }
 
@@ -844,6 +844,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   margin-bottom: 8px;
 }
 
+.stats-grid-3,
 .stats-grid-4 {
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
@@ -1583,15 +1584,15 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
   .nav-item {
     flex-direction: column;
-    padding: 6px 2px;
+    padding: 6px 1px;
     gap: 2px;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     flex: 1;
     text-align: center;
   }
 
   .nav-item span {
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1620,8 +1621,8 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   }
 
   .nav-icon {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
   }
 
   .main-content {
@@ -1636,6 +1637,10 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
 
   .page-title {
     font-size: 1.35rem;
+  }
+
+  .stats-grid-3 {
+    grid-template-columns: 1fr;
   }
 
   .stats-grid-4 {
@@ -1723,6 +1728,7 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
    RESPONSIVE — SMALL MOBILE (<480px)
    ============================================ */
 @media (max-width: 480px) {
+  .stats-grid-3,
   .stats-grid-4 {
     grid-template-columns: 1fr;
   }
@@ -2009,9 +2015,9 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   }
 
   .login-card {
-    padding: 32px 20px;
-    margin: auto 0;
-    max-width: 100%;
+    padding: 30px 20px;
+    margin: auto;
+    max-width: 300px;
   }
 
   .login-logo {
@@ -2064,6 +2070,60 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   font-weight: 500 !important;
   color: var(--text-secondary) !important;
   margin-left: 4px !important;
+}
+
+/* ============================================
+   ALERT CLOSE BUTTON
+   ============================================ */
+.alert-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: auto;
+  line-height: 1;
+  align-self: flex-start;
+  transition: color 0.2s ease;
+}
+
+.alert-close-btn:hover {
+  color: var(--text-primary);
+}
+
+/* ============================================
+   RESPONSIVE — LANDSCAPE ORIENTATION
+   ============================================ */
+@media (max-height: 500px) and (orientation: landscape) {
+  .login-screen {
+    overflow-y: auto;
+    align-items: flex-start;
+    padding: 20px 16px;
+  }
+
+  .login-card {
+    padding: 24px 24px;
+    margin: 20px auto;
+    max-width: 320px;
+  }
+
+  .login-logo {
+    margin-bottom: 16px;
+  }
+
+  .logo-icon {
+    font-size: 2.2rem;
+    margin-bottom: 6px;
+  }
+
+  .logo-text {
+    font-size: 1.5rem;
+  }
+
+  .form-group {
+    margin-bottom: 12px;
+  }
 }
 
 

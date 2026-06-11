@@ -5,6 +5,7 @@
 
 const EODPage = (() => {
   let mounted = false;
+  let todayLogId = null;
 
   function getHTML() {
     return `
@@ -234,32 +235,38 @@ const EODPage = (() => {
     const price15Input = document.getElementById('log-price-15');
     const price05Input = document.getElementById('log-price-05');
 
+    const getVal = (id) => {
+      const val = document.getElementById(id)?.value;
+      return val === '' ? null : Number(val);
+    };
+
     const data = {
-      pets_produced_1_5L: Number(document.getElementById('log-produced-15').value) || 0,
-      pets_produced_0_5L: Number(document.getElementById('log-produced-05').value) || 0,
-      pets_sold_1_5L: Number(document.getElementById('log-sold-15').value) || 0,
-      pets_sold_0_5L: Number(document.getElementById('log-sold-05').value) || 0,
+      pets_produced_1_5L: getVal('log-produced-15'),
+      pets_produced_0_5L: getVal('log-produced-05'),
+      pets_sold_1_5L: getVal('log-sold-15'),
+      pets_sold_0_5L: getVal('log-sold-05'),
       price_per_pet_1_5L: price15Input && price15Input.value !== '' ? Number(price15Input.value) : null,
       price_per_pet_0_5L: price05Input && price05Input.value !== '' ? Number(price05Input.value) : null,
       minerals_used: {
-        calcium_kg: Number(document.getElementById('log-calcium').value) || 0,
-        magnesium_kg: Number(document.getElementById('log-magnesium').value) || 0,
-        sodium_kg: Number(document.getElementById('log-sodium').value) || 0
+        calcium_kg: getVal('log-calcium'),
+        magnesium_kg: getVal('log-magnesium'),
+        sodium_kg: getVal('log-sodium')
       }
     };
 
     // Validate
-    if (data.pets_produced_1_5L === 0 && data.pets_produced_0_5L === 0 &&
-        data.pets_sold_1_5L === 0 && data.pets_sold_0_5L === 0) {
+    const isZeroOrNull = (v) => v === 0 || v === null || v === undefined;
+    if (isZeroOrNull(data.pets_produced_1_5L) && isZeroOrNull(data.pets_produced_0_5L) &&
+        isZeroOrNull(data.pets_sold_1_5L) && isZeroOrNull(data.pets_sold_0_5L)) {
       Utils.showToast('Please enter production or sales data.', 'warning');
       return;
     }
 
-    if (data.price_per_pet_1_5L !== null && data.pets_sold_1_5L <= 0) {
+    if (data.price_per_pet_1_5L !== null && (data.pets_sold_1_5L || 0) <= 0) {
       Utils.showToast('Please enter a sold quantity for 1.5L PET to set its price.', 'warning');
       return;
     }
-    if (data.price_per_pet_0_5L !== null && data.pets_sold_0_5L <= 0) {
+    if (data.price_per_pet_0_5L !== null && (data.pets_sold_0_5L || 0) <= 0) {
       Utils.showToast('Please enter a sold quantity for 0.5L PET to set its price.', 'warning');
       return;
     }
@@ -269,11 +276,23 @@ const EODPage = (() => {
     btnLoader.classList.remove('hidden');
 
     try {
-      const response = await API.logDaily(data);
-      Utils.showToast('Daily log submitted successfully!', 'success');
-      e.target.reset();
-      updatePreview();
-      updateRevenue();
+      let response;
+      if (todayLogId) {
+        response = await API.updateDailyLog(todayLogId, data);
+        Utils.showToast('Daily log updated successfully!', 'success');
+      } else {
+        response = await API.logDaily(data);
+        Utils.showToast('Daily log submitted successfully!', 'success');
+        const newLog = response.daily_log || response.log || response;
+        todayLogId = newLog._id || newLog.id;
+      }
+      
+      // Update button text to reflect saved state
+      const btnText = document.querySelector('#log-submit-btn .btn-text');
+      if (btnText) {
+        btnText.textContent = 'Update Daily Log';
+      }
+
       loadCurrentInventory();
       
       // Update the low stock persistent alerts toast
@@ -293,14 +312,77 @@ const EODPage = (() => {
   }
 
   /**
+   * Load today's daily log if it exists and populate the form.
+   */
+  async function loadTodayData() {
+    try {
+      const response = await API.getToday();
+      const log = response.log;
+      if (log) {
+        todayLogId = log._id || log.id;
+        
+        // Populate inputs
+        const fields = {
+          'log-produced-15': log.pets_produced_1_5L,
+          'log-produced-05': log.pets_produced_0_5L,
+          'log-sold-15': log.pets_sold_1_5L,
+          'log-sold-05': log.pets_sold_0_5L,
+          'log-price-15': log.price_per_pet_1_5L,
+          'log-price-05': log.price_per_pet_0_5L,
+          'log-calcium': log.minerals_used?.calcium_kg,
+          'log-magnesium': log.minerals_used?.magnesium_kg,
+          'log-sodium': log.minerals_used?.sodium_kg
+        };
+
+        for (const [id, val] of Object.entries(fields)) {
+          const el = document.getElementById(id);
+          if (el && val !== undefined && val !== null) {
+            el.value = val;
+          }
+        }
+
+        // Open minerals section if minerals are present
+        const minerals = log.minerals_used || {};
+        if (minerals.calcium_kg || minerals.magnesium_kg || minerals.sodium_kg) {
+          const content = document.getElementById('minerals-content');
+          const toggle = document.getElementById('minerals-toggle');
+          if (content && toggle) {
+            content.classList.add('open');
+            toggle.classList.add('open');
+          }
+        }
+
+        // Update button text
+        const btnText = document.querySelector('#log-submit-btn .btn-text');
+        if (btnText) {
+          btnText.textContent = 'Update Daily Log';
+        }
+
+        // Update previews
+        updatePreview();
+        updateRevenue();
+      } else {
+        todayLogId = null;
+      }
+    } catch (err) {
+      console.error('Failed to load today log:', err);
+      todayLogId = null;
+    }
+  }
+
+  /**
    * Mount the page into the given container.
    */
   function mount(container) {
     container.innerHTML = getHTML();
     mounted = true;
+    todayLogId = null;
 
     // Load current inventory
     loadCurrentInventory();
+
+    // Load today's existing daily log
+    loadTodayData();
 
     // Bind forms
     document.getElementById('daily-log-form')?.addEventListener('submit', handleDailyLogSubmit);
@@ -335,4 +417,3 @@ const EODPage = (() => {
 
   return { mount, unmount };
 })();
-

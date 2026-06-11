@@ -190,6 +190,56 @@ const API = (() => {
   }
 
   /**
+   * Add expense — POST /expenses
+   */
+  async function addExpense(data) {
+    return request('expenses', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+  }
+
+  /**
+   * Get today's expense — GET /expenses
+   */
+  async function getTodayExpense() {
+    return request('expenses');
+  }
+
+  /**
+   * Get expense summary — GET /expenses?type=summary&period=...
+   */
+  async function getExpenseSummary(period) {
+    return request(`expenses?type=summary&period=${period}`);
+  }
+
+  /**
+   * Get expense history — GET /expenses?type=history&limit=...&offset=...
+   */
+  async function getExpenseHistory(limit = 30, offset = 0) {
+    return request(`expenses?type=history&limit=${limit}&offset=${offset}`);
+  }
+
+  /**
+   * Update expense — PUT /expenses?id=...
+   */
+  async function updateExpense(id, data) {
+    return request(`expenses?id=${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+  }
+
+  /**
+   * Delete expense — DELETE /expenses?id=...
+   */
+  async function deleteExpense(id) {
+    return request(`expenses?id=${id}`, {
+      method: 'DELETE'
+    });
+  }
+
+  /**
    * Logout — clear token and state.
    */
   function logout() {
@@ -213,6 +263,12 @@ const API = (() => {
     updateAddition,
     deleteAddition,
     overwriteInventory,
+    addExpense,
+    getTodayExpense,
+    getExpenseSummary,
+    getExpenseHistory,
+    updateExpense,
+    deleteExpense,
     logout,
     getToken,
     clearToken

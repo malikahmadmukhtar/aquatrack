@@ -164,26 +164,35 @@ const handler = async (event) => {
         };
       }
 
-      const {
-        bottles_1_5L = 0,
-        bottles_0_5L = 0,
-        caps = 0,
-        shelling_1_5L_kg = 0,
-        shelling_0_5L_kg = 0,
-        calcium_kg = 0,
-        magnesium_kg = 0,
-        sodium_kg = 0,
-      } = body || {};
+      const raw_bottles_1_5L = body.bottles_1_5L;
+      const raw_bottles_0_5L = body.bottles_0_5L;
+      const raw_caps = body.caps;
+      const raw_shelling_1_5L_kg = body.shelling_1_5L_kg;
+      const raw_shelling_0_5L_kg = body.shelling_0_5L_kg;
+      const raw_calcium_kg = body.calcium_kg;
+      const raw_magnesium_kg = body.magnesium_kg;
+      const raw_sodium_kg = body.sodium_kg;
 
       // Validate non-negative numbers
-      const additions = { bottles_1_5L, bottles_0_5L, caps, shelling_1_5L_kg, shelling_0_5L_kg, calcium_kg, magnesium_kg, sodium_kg };
-      for (const [key, val] of Object.entries(additions)) {
-        if (typeof val !== "number" || val < 0) {
-          return {
-            statusCode: 400,
-            headers: CORS_HEADERS,
-            body: JSON.stringify({ error: `${key} must be a non-negative number` }),
-          };
+      const rawAdditions = {
+        bottles_1_5L: raw_bottles_1_5L,
+        bottles_0_5L: raw_bottles_0_5L,
+        caps: raw_caps,
+        shelling_1_5L_kg: raw_shelling_1_5L_kg,
+        shelling_0_5L_kg: raw_shelling_0_5L_kg,
+        calcium_kg: raw_calcium_kg,
+        magnesium_kg: raw_magnesium_kg,
+        sodium_kg: raw_sodium_kg,
+      };
+      for (const [key, val] of Object.entries(rawAdditions)) {
+        if (val !== null && val !== undefined) {
+          if (typeof val !== "number" || val < 0) {
+            return {
+              statusCode: 400,
+              headers: CORS_HEADERS,
+              body: JSON.stringify({ error: `${key} must be a non-negative number` }),
+            };
+          }
         }
       }
 
@@ -202,6 +211,17 @@ const handler = async (event) => {
         }
 
         const oldAdded = addition.added || {};
+
+        const bottles_1_5L = (raw_bottles_1_5L !== null && raw_bottles_1_5L !== undefined) ? raw_bottles_1_5L : (oldAdded.bottles_1_5L || 0);
+        const bottles_0_5L = (raw_bottles_0_5L !== null && raw_bottles_0_5L !== undefined) ? raw_bottles_0_5L : (oldAdded.bottles_0_5L || 0);
+        const caps = (raw_caps !== null && raw_caps !== undefined) ? raw_caps : (oldAdded.caps || 0);
+        const shelling_1_5L_kg = (raw_shelling_1_5L_kg !== null && raw_shelling_1_5L_kg !== undefined) ? raw_shelling_1_5L_kg : (oldAdded.shelling_1_5L_kg || 0);
+        const shelling_0_5L_kg = (raw_shelling_0_5L_kg !== null && raw_shelling_0_5L_kg !== undefined) ? raw_shelling_0_5L_kg : (oldAdded.shelling_0_5L_kg || 0);
+        const calcium_kg = (raw_calcium_kg !== null && raw_calcium_kg !== undefined) ? raw_calcium_kg : (oldAdded.calcium_kg || 0);
+        const magnesium_kg = (raw_magnesium_kg !== null && raw_magnesium_kg !== undefined) ? raw_magnesium_kg : (oldAdded.magnesium_kg || 0);
+        const sodium_kg = (raw_sodium_kg !== null && raw_sodium_kg !== undefined) ? raw_sodium_kg : (oldAdded.sodium_kg || 0);
+
+        const additions = { bottles_1_5L, bottles_0_5L, caps, shelling_1_5L_kg, shelling_0_5L_kg, calcium_kg, magnesium_kg, sodium_kg };
 
         // Calculate new inventory totals (current - oldAdded + newAdded)
         const new_bottles_1_5L = (current.bottles_1_5L || 0) - (oldAdded.bottles_1_5L || 0) + bottles_1_5L;
@@ -281,25 +301,34 @@ const handler = async (event) => {
 
       // CASE B: OVERWRITE CURRENT BASELINE STOCK DIRECTLY
       if (overwrite) {
+        const final_bottles_1_5L = raw_bottles_1_5L !== null && raw_bottles_1_5L !== undefined ? raw_bottles_1_5L : (current.bottles_1_5L || 0);
+        const final_bottles_0_5L = raw_bottles_0_5L !== null && raw_bottles_0_5L !== undefined ? raw_bottles_0_5L : (current.bottles_0_5L || 0);
+        const final_caps = raw_caps !== null && raw_caps !== undefined ? raw_caps : (current.caps || 0);
+        const final_shelling_1_5L_kg = raw_shelling_1_5L_kg !== null && raw_shelling_1_5L_kg !== undefined ? raw_shelling_1_5L_kg : (current.shelling_1_5L_kg || 0);
+        const final_shelling_0_5L_kg = raw_shelling_0_5L_kg !== null && raw_shelling_0_5L_kg !== undefined ? raw_shelling_0_5L_kg : (current.shelling_0_5L_kg || 0);
+        const final_calcium_kg = raw_calcium_kg !== null && raw_calcium_kg !== undefined ? raw_calcium_kg : (current.calcium_kg || 0);
+        const final_magnesium_kg = raw_magnesium_kg !== null && raw_magnesium_kg !== undefined ? raw_magnesium_kg : (current.magnesium_kg || 0);
+        const final_sodium_kg = raw_sodium_kg !== null && raw_sodium_kg !== undefined ? raw_sodium_kg : (current.sodium_kg || 0);
+
         const updatedInventory = {
           _id: "current",
-          bottles_1_5L,
-          bottles_0_5L,
-          caps,
-          shelling_1_5L_kg,
-          shelling_0_5L_kg,
-          calcium_kg,
-          magnesium_kg,
-          sodium_kg,
+          bottles_1_5L: final_bottles_1_5L,
+          bottles_0_5L: final_bottles_0_5L,
+          caps: final_caps,
+          shelling_1_5L_kg: final_shelling_1_5L_kg,
+          shelling_0_5L_kg: final_shelling_0_5L_kg,
+          calcium_kg: final_calcium_kg,
+          magnesium_kg: final_magnesium_kg,
+          sodium_kg: final_sodium_kg,
           // Set baselines to these values directly
-          bottles_1_5L_at_last_addition: bottles_1_5L,
-          bottles_0_5L_at_last_addition: bottles_0_5L,
-          caps_at_last_addition: caps,
-          shelling_1_5L_kg_at_last_addition: shelling_1_5L_kg,
-          shelling_0_5L_kg_at_last_addition: shelling_0_5L_kg,
-          calcium_kg_at_last_addition: calcium_kg,
-          magnesium_kg_at_last_addition: magnesium_kg,
-          sodium_kg_at_last_addition: sodium_kg,
+          bottles_1_5L_at_last_addition: final_bottles_1_5L,
+          bottles_0_5L_at_last_addition: final_bottles_0_5L,
+          caps_at_last_addition: final_caps,
+          shelling_1_5L_kg_at_last_addition: final_shelling_1_5L_kg,
+          shelling_0_5L_kg_at_last_addition: final_shelling_0_5L_kg,
+          calcium_kg_at_last_addition: final_calcium_kg,
+          magnesium_kg_at_last_addition: final_magnesium_kg,
+          sodium_kg_at_last_addition: final_sodium_kg,
           last_inventory_addition_date: now,
           low_inventory_alert: false,
           alert_metrics: [],
@@ -310,7 +339,16 @@ const handler = async (event) => {
         // Save record documenting baseline overwrite
         const additionRecord = {
           date: now.split("T")[0],
-          added: additions,
+          added: {
+            bottles_1_5L: raw_bottles_1_5L,
+            bottles_0_5L: raw_bottles_0_5L,
+            caps: raw_caps,
+            shelling_1_5L_kg: raw_shelling_1_5L_kg,
+            shelling_0_5L_kg: raw_shelling_0_5L_kg,
+            calcium_kg: raw_calcium_kg,
+            magnesium_kg: raw_magnesium_kg,
+            sodium_kg: raw_sodium_kg,
+          },
           is_overwrite: true,
           inventory_before: {
             bottles_1_5L: current.bottles_1_5L || 0,
@@ -322,7 +360,16 @@ const handler = async (event) => {
             magnesium_kg: current.magnesium_kg || 0,
             sodium_kg: current.sodium_kg || 0,
           },
-          inventory_after: { ...additions },
+          inventory_after: {
+            bottles_1_5L: final_bottles_1_5L,
+            bottles_0_5L: final_bottles_0_5L,
+            caps: final_caps,
+            shelling_1_5L_kg: final_shelling_1_5L_kg,
+            shelling_0_5L_kg: final_shelling_0_5L_kg,
+            calcium_kg: final_calcium_kg,
+            magnesium_kg: final_magnesium_kg,
+            sodium_kg: final_sodium_kg,
+          },
           created_at: now,
         };
 
@@ -331,11 +378,22 @@ const handler = async (event) => {
         return {
           statusCode: 200,
           headers: CORS_HEADERS,
-          body: JSON.stringify({ message: "Inventory baseline reset successfully", inventory: updatedInventory }),
+          body: JSON.stringify({ message: "Inventory baseline corrected successfully", inventory: updatedInventory }),
         };
       }
 
       // CASE C: ADD STOCK TRANSACTION (STANDARD ADDITION)
+      const bottles_1_5L = (raw_bottles_1_5L !== null && raw_bottles_1_5L !== undefined) ? raw_bottles_1_5L : 0;
+      const bottles_0_5L = (raw_bottles_0_5L !== null && raw_bottles_0_5L !== undefined) ? raw_bottles_0_5L : 0;
+      const caps = (raw_caps !== null && raw_caps !== undefined) ? raw_caps : 0;
+      const shelling_1_5L_kg = (raw_shelling_1_5L_kg !== null && raw_shelling_1_5L_kg !== undefined) ? raw_shelling_1_5L_kg : 0;
+      const shelling_0_5L_kg = (raw_shelling_0_5L_kg !== null && raw_shelling_0_5L_kg !== undefined) ? raw_shelling_0_5L_kg : 0;
+      const calcium_kg = (raw_calcium_kg !== null && raw_calcium_kg !== undefined) ? raw_calcium_kg : 0;
+      const magnesium_kg = (raw_magnesium_kg !== null && raw_magnesium_kg !== undefined) ? raw_magnesium_kg : 0;
+      const sodium_kg = (raw_sodium_kg !== null && raw_sodium_kg !== undefined) ? raw_sodium_kg : 0;
+
+      const additions = { bottles_1_5L, bottles_0_5L, caps, shelling_1_5L_kg, shelling_0_5L_kg, calcium_kg, magnesium_kg, sodium_kg };
+
       const inventory_before = {
         bottles_1_5L: current.bottles_1_5L || 0,
         bottles_0_5L: current.bottles_0_5L || 0,

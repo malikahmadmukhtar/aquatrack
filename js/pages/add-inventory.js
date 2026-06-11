@@ -181,19 +181,24 @@ const AddInventoryPage = (() => {
     const btnText = btn.querySelector('.btn-text');
     const btnLoader = btn.querySelector('.btn-loader');
 
+    const getVal = (id) => {
+      const val = document.getElementById(id).value;
+      return val === '' ? null : Number(val);
+    };
+
     const data = {
-      bottles_1_5L: Number(document.getElementById('inv-bottles-15').value) || 0,
-      bottles_0_5L: Number(document.getElementById('inv-bottles-05').value) || 0,
-      caps: Number(document.getElementById('inv-caps').value) || 0,
-      shelling_1_5L_kg: Number(document.getElementById('inv-shelling-15').value) || 0,
-      shelling_0_5L_kg: Number(document.getElementById('inv-shelling-05').value) || 0,
-      calcium_kg: Number(document.getElementById('inv-calcium').value) || 0,
-      magnesium_kg: Number(document.getElementById('inv-magnesium').value) || 0,
-      sodium_kg: Number(document.getElementById('inv-sodium').value) || 0
+      bottles_1_5L: getVal('inv-bottles-15'),
+      bottles_0_5L: getVal('inv-bottles-05'),
+      caps: getVal('inv-caps'),
+      shelling_1_5L_kg: getVal('inv-shelling-15'),
+      shelling_0_5L_kg: getVal('inv-shelling-05'),
+      calcium_kg: getVal('inv-calcium'),
+      magnesium_kg: getVal('inv-magnesium'),
+      sodium_kg: getVal('inv-sodium')
     };
 
     // Validate at least one field unless in overwrite mode
-    if (!isOverwriteMode && Object.values(data).every(v => v === 0)) {
+    if (!isOverwriteMode && Object.values(data).every(v => v === 0 || v === null)) {
       Utils.showToast('Please enter at least one inventory value.', 'warning');
       return;
     }
